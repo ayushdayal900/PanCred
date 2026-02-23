@@ -6,6 +6,7 @@ import Lend from './pages/Lend';
 import Borrow from './pages/Borrow';
 import RoleSelection from './pages/RoleSelection';
 import KYCVerification from './pages/KYCVerification';
+import Login from './pages/Login';
 import { useAuth } from './context/AuthContext';
 
 function App() {
@@ -20,7 +21,7 @@ function App() {
             <div className="flex justify-center mt-20 text-white font-medium">Syncing Wallet Profile...</div>
           ) : !isConnected ? (
             <Routes>
-              <Route path="*" element={<div className="text-center mt-20 text-xl font-medium text-white">Welcome to MicroFin. Please connect your wallet.</div>} />
+              <Route path="*" element={<Login />} />
             </Routes>
           ) : userProfile?.role === 'Unassigned' ? (
             <Routes>
