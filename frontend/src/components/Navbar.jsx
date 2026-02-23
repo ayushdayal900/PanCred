@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 const Navbar = () => {
     return (
@@ -18,9 +19,7 @@ const Navbar = () => {
                 <Link to="/lend" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">Lend</Link>
                 <Link to="/borrow" className="text-slate-300 hover:text-white transition-colors text-sm font-medium">Borrow</Link>
 
-                <button className="bg-fintech-accent hover:bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors ml-4 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                    Connect Identity
-                </button>
+                <ConnectButton label="Connect Identity" showBalance={false} chainStatus="icon" />
             </div>
         </nav>
     );
