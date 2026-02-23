@@ -1,8 +1,8 @@
 <div align="center">
   
-  <img src="./frontend/public/vite.svg" alt="MicroFin Logo" width="120" />
+ 
   
-  # MicroFin 🚀
+  # MicroFin 
   
   *Enterprise-Grade Web3 Microfinance Platform*
   
