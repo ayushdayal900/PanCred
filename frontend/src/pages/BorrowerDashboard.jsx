@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const BorrowerDashboard = () => {
     const { userProfile } = useAuth();
-    const [amount, setAmount] = amountState('');
+    const [amount, setAmount] = useState('');
     const [duration, setDuration] = useState('');
     const [purpose, setPurpose] = useState('');
     const [loading, setLoading] = useState(false);
