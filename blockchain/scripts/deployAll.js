@@ -1,0 +1,54 @@
+const hre = require("hardhat");
+
+async function main() {
+    const [deployer] = await hre.ethers.getSigners();
+
+    console.log("====================================================");
+    console.log("🚀 Starting Deployment to Polygon Amoy Testnet");
+    console.log("Deploying with account:", deployer.address);
+
+    const balance = await hre.ethers.provider.getBalance(deployer.address);
+    console.log("Account balance:", hre.ethers.formatEther(balance), "POL");
+    console.log("====================================================");
+
+    // 1. Deploy SoulboundIdentity
+    console.log("\n📦 Deploying SoulboundIdentity...");
+    const SoulboundIdentity = await hre.ethers.getContractFactory("SoulboundIdentity");
+    const identity = await SoulboundIdentity.deploy(deployer.address);
+    await identity.waitForDeployment();
+    const identityAddress = await identity.getAddress();
+    console.log("✅ SoulboundIdentity deployed to:", identityAddress);
+
+    // 2. Deploy Microfinance (Loan Contract)
+    console.log("\n📦 Deploying Microfinance...");
+    const Microfinance = await hre.ethers.getContractFactory("Microfinance");
+    const microfinance = await Microfinance.deploy();
+    await microfinance.waitForDeployment();
+    const microfinanceAddress = await microfinance.getAddress();
+    console.log("✅ Microfinance deployed to:", microfinanceAddress);
+
+    // 3. Deploy TrustScoreRegistry
+    console.log("\n📦 Deploying TrustScoreRegistry...");
+    const TrustScoreRegistry = await hre.ethers.getContractFactory("TrustScoreRegistry");
+    const trustRegistry = await TrustScoreRegistry.deploy(deployer.address);
+    await trustRegistry.waitForDeployment();
+    const trustRegistryAddress = await trustRegistry.getAddress();
+    console.log("✅ TrustScoreRegistry deployed to:", trustRegistryAddress);
+
+    console.log("\n====================================================");
+    console.log("🎉 ALL CONTRACTS DEPLOYED SUCCESSFULLY");
+    console.log("----------------------------------------------------");
+    console.log("Identity Contract:  ", identityAddress);
+    console.log("Loan Contract:      ", microfinanceAddress);
+    console.log("Trust Score Contract:", trustRegistryAddress);
+    console.log("====================================================");
+}
+
+// Global error handling for the deployment process
+main()
+    .then(() => process.exit(0))
+    .catch((error) => {
+        console.error("\n❌ Deployment failed!");
+        console.error(error);
+        process.exit(1);
+    });

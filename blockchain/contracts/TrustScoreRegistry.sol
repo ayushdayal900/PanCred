@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+/**
+ * @title TrustScoreRegistry
+ * @dev Stores and manages AI-generated trust scores for users.
+ * This contract acts as an on-chain repository for reputational data,
+ * where only the authorized owner (e.g., an AI backend or DAO) can update scores.
+ */
+contract TrustScoreRegistry is Ownable {
+    
+    // Mapping from user address to their trust score (0-1000 scale recommended)
+    mapping(address => uint256) private _trustScores;
+
+    // Event emitted whenever a trust score is updated
+    event TrustScoreUpdated(address indexed user, uint256 oldScore, uint256 newScore);
+
+    // Custom errors for gas efficiency
+    error TrustScore_InvalidScore(uint256 score);
+
+    /**
+     * @dev Constructor sets the initial owner of the registry.
+     * @param initialOwner The address that will have permission to update scores.
+     */
+    constructor(address initialOwner) Ownable(initialOwner) {}
+
+    /**
+     * @dev Updates the trust score for a specific user.
+     * Requirements:
+     * - Only the contract owner can call this.
+     * - Score must be within the valid range (e.g., 0 to 1000).
+     * @param user The address of the user.
+     * @param score The new trust score to assign.
+     */
+    function updateTrustScore(address user, uint256 score) external onlyOwner {
+        // Validation: Assuming a max score of 1000 for granularity (100.0%)
+        if (score > 1000) {
+            revert TrustScore_InvalidScore(score);
+        }
+
+        uint256 oldScore = _trustScores[user];
+        _trustScores[user] = score;
+
+        emit TrustScoreUpdated(user, oldScore, score);
+    }
+
+    /**
+     * @dev Retrieves the current trust score for a user.
+     * @param user The address of the user.
+     * @return The current trust score.
+     */
+    function getTrustScore(address user) external view returns (uint256) {
+        return _trustScores[user];
+    }
+}
