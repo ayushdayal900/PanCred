@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --color-fintech-dark: #0f172a;
+  --color-fintech-card: #1e293b;
+  --color-fintech-accent: #3b82f6;
+  --color-fintech-success: #10b981;
+  --color-fintech-warning: #f59e0b;
+  --color-fintech-border: #334155;
+  --font-sans: 'Inter', sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-fintech-dark);
+    color: #e2e8f0;
+    /* slate-200 */
+    font-family: var(--font-sans);
+    letter-spacing: -0.015em;
+  }
+}
