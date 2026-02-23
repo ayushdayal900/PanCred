@@ -15,6 +15,7 @@ import {
   QueryClientProvider,
   QueryClient,
 } from '@tanstack/react-query';
+import { AuthProvider } from './context/AuthContext';
 
 const config = getDefaultConfig({
   appName: 'MicroFin',
@@ -28,15 +29,17 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={darkTheme({
-          accentColor: '#3b82f6',
-          accentColorForeground: 'white',
-          borderRadius: 'medium',
-          fontStack: 'system',
-          overlayBlur: 'small',
-        })}>
-          <App />
-        </RainbowKitProvider>
+        <AuthProvider>
+          <RainbowKitProvider theme={darkTheme({
+            accentColor: '#3b82f6',
+            accentColorForeground: 'white',
+            borderRadius: 'medium',
+            fontStack: 'system',
+            overlayBlur: 'small',
+          })}>
+            <App />
+          </RainbowKitProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </WagmiProvider>
   </StrictMode>,

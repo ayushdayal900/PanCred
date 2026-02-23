@@ -1,23 +1,44 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import Lend from './pages/Lend';
 import Borrow from './pages/Borrow';
+import RoleSelection from './pages/RoleSelection';
+import KYCVerification from './pages/KYCVerification';
+import { useAuth } from './context/AuthContext';
 
 function App() {
+  const { isConnected, userProfile, loading } = useAuth();
+
   return (
     <Router>
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-1 bg-fintech-dark">
-          <Routes>
-            <Route path="/" element={<div className="text-center mt-20 text-xl font-medium">Welcome to MicroFin. Please connect your wallet.</div>} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/lend" element={<Lend />} />
-            <Route path="/borrow" element={<Borrow />} />
-            <Route path="*" element={<div className="text-center mt-20">404 Not Found</div>} />
-          </Routes>
+          {loading ? (
+            <div className="flex justify-center mt-20 text-white font-medium">Syncing Wallet Profile...</div>
+          ) : !isConnected ? (
+            <Routes>
+              <Route path="*" element={<div className="text-center mt-20 text-xl font-medium text-white">Welcome to MicroFin. Please connect your wallet.</div>} />
+            </Routes>
+          ) : userProfile?.role === 'Unassigned' ? (
+            <Routes>
+              <Route path="*" element={<RoleSelection />} />
+            </Routes>
+          ) : userProfile?.kycStatus === 'Pending' ? (
+            <Routes>
+              <Route path="*" element={<KYCVerification />} />
+            </Routes>
+          ) : (
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/lend" element={<Lend />} />
+              <Route path="/borrow" element={<Borrow />} />
+              <Route path="*" element={<div className="text-center mt-20 text-white">404 Not Found</div>} />
+            </Routes>
+          )}
         </main>
       </div>
     </Router>
