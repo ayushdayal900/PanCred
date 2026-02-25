@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@theme {
+  --color-fintech-dark: #020617;
+  /* Slasher ink dark */
+  --color-fintech-surface: #0f172a;
+  --color-fintech-card: #1e293b;
+  --color-fintech-accent: #2563eb;
+  /* Stronger blue */
+  --color-fintech-success: #10b981;
+  --color-fintech-warning: #f59e0b;
+  --color-fintech-border: #1e293b;
+  --color-fintech-muted: #64748b;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --shadow-premium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-premium-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-size: 14px;
+    /* Mobile base */
+  }
+
+  @media (min-width: 1024px) {
+    html {
+      font-size: 16px;
+      /* Desktop base */
+    }
+  }
+
+  body {
+    background-color: var(--color-fintech-dark);
+    color: #f1f5f9;
+    /* slate-100 */
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    @apply text-[28px] md:text-[36px] lg:text-[44px] leading-tight;
+  }
+
+  h2 {
+    @apply text-[24px] md:text-[30px] lg:text-[36px] leading-tight;
+  }
+
+  h3 {
+    @apply text-[20px] md:text-[24px] lg:text-[28px] leading-tight;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  .global-container {
+    @apply max-w-[1200px] mx-auto px-4 md:px-6 lg:px-8 w-full;
+  }
+
+  .premium-card {
+    @apply bg-fintech-surface border border-fintech-border rounded-xl shadow-premium p-5 md:p-6 lg:p-8 transition-all duration-300;
+  }
+
+  .premium-card:hover {
+    @apply border-fintech-accent/30 shadow-premium-xl;
+  }
+
+  .btn-primary {
+    @apply bg-fintech-accent hover:bg-blue-700 text-white font-black uppercase tracking-widest text-[10px] py-4 px-6 rounded-xl transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 flex items-center justify-center gap-2;
+    min-height: 44px;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:text-white hover:bg-slate-800 transition-all duration-200 text-sm font-bold;
+  }
+
+  .sidebar-link.active {
+    @apply bg-blue-600/10 text-blue-500 border border-blue-500/20;
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.1);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-fintech-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-fintech-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fintech-muted);
+}
