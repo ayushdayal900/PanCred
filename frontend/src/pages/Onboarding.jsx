@@ -15,11 +15,11 @@ import {
     FiCreditCard,
     FiLoader,
     FiExternalLink,
-    FiXCircle
+    FiXCircle,
+    FiActivity
 } from 'react-icons/fi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount, useConfig } from 'wagmi';
-import { getConnectorClient } from '@wagmi/core';
+import { useAccount, useConfig, useWalletClient, useSwitchChain } from 'wagmi';
 import { mintIdentity, checkIdentityOwnership } from '../blockchainService';
 import toast from 'react-hot-toast';
 
@@ -28,35 +28,39 @@ const Onboarding = () => {
     const navigate = useNavigate();
     const { address, isConnected: walletConnected, chainId } = useAccount();
     const config = useConfig();
+    const { data: walletClient, status: walletClientStatus } = useWalletClient();
+    const { switchChain } = useSwitchChain();
 
     const [currentStep, setCurrentStep] = useState(2);
     const [loading, setLoading] = useState(false);
+    const [walletConfirmed, setWalletConfirmed] = useState(false);
 
     const isOnboarded = localStorage.getItem("isOnboarded") === "true";
     const isAuthenticated = !!userProfile;
 
     useEffect(() => {
-        console.log("--- Onboarding Debug ---");
-        console.log("Wallet Connected:", walletConnected);
-        console.log("Authenticated:", isAuthenticated);
-        console.log("Onboarded:", isOnboarded);
+        console.log(`[Onboarding] State Update - Step: ${currentStep}, Wallet: ${walletConnected}, Client Status: ${walletClientStatus}, Chain ID: ${chainId}, Auth: ${isAuthenticated}, Onboarded: ${isOnboarded}`);
+    }, [currentStep, walletConnected, walletClientStatus, chainId, isAuthenticated, isOnboarded]);
 
+    useEffect(() => {
         if (!isAuthenticated) {
             navigate('/signin');
             return;
         }
 
-        // Only set step based on profile if we are NOT already onboarded
+        // Only set step based on profile if we are NOT already onboarded and at the start
         if (currentStep === 2) {
             if (userProfile?.role === 'Unassigned') {
                 setCurrentStep(2);
             } else if (userProfile?.kycStatus === 'Pending') {
                 setCurrentStep(3);
+                console.log("[Onboarding] jumping to step 3 based on kycStatus");
             } else if (userProfile?.kycStatus === 'FaceVerified') {
                 setCurrentStep(5);
+                console.log("[Onboarding] jumping to step 5 based on kycStatus");
             }
         }
-    }, [userProfile, isAuthenticated, isOnboarded, walletConnected]);
+    }, [userProfile, isAuthenticated, isOnboarded, currentStep, walletConnected]);
 
     const handleExitOnboarding = () => {
         const confirmExit = window.confirm("Are you sure you want to exit? Your protocol initialization progress will be reset.");
@@ -135,42 +139,87 @@ const Onboarding = () => {
         }, 3000);
     };
 
-    useEffect(() => {
-        if (currentStep === 5 && walletConnected && address) {
+    // No auto-progression from wallet to mint anymore to prevent "bypassing"
+    const handleWalletConnectionProceed = () => {
+        if (walletConnected && address) {
+            setWalletConfirmed(true);
             setCurrentStep(6);
+            console.log("[Onboarding] Manual wallet confirmation received. Proceeding to Mint.");
+        } else {
+            toast.error("Please connect your wallet first.");
         }
-    }, [currentStep, walletConnected, address]);
+    };
 
     const handleMintNft = async () => {
+        console.log(`[Onboarding] Mint attempt. Status: ${walletClientStatus}, Client: ${!!walletClient}, Chain: ${chainId}`);
+
+        if (!walletConnected) {
+            return toast.error("Please connect your wallet first.");
+        }
+
+        if (chainId !== 11155111) {
+            toast.error("You are on the wrong network. Switching to Sepolia...");
+            try {
+                await switchChain({ chainId: 11155111 });
+            } catch (e) {
+                console.error("Failed to switch chain", e);
+                return toast.error("Please manually switch your wallet to Sepolia network.");
+            }
+            return;
+        }
+
+        if (!walletClient) {
+            if (walletClientStatus === 'pending') {
+                return toast.error("Wallet connection is still initializing. Please wait a moment.");
+            }
+            return toast.error("Wallet connection lost. Please try reconnecting or refreshing the page.");
+        }
+
         setLoading(true);
         const tid = toast.loading('Initiating on-chain identity mint...');
         try {
-            const client = await getConnectorClient(config, { chainId });
-            const provider = new ethers.BrowserProvider(client.transport);
-            const signer = new ethers.JsonRpcSigner(provider, client.account.address);
+            const provider = new ethers.BrowserProvider(walletClient.transport);
+            const signer = await provider.getSigner();
 
             toast.loading('Confirm mint in wallet...', { id: tid });
-            const { txHash } = await mintIdentity(signer, (hash) => setTxnHash(hash));
+            const result = await mintIdentity(signer, (hash) => setTxnHash(hash));
 
-            toast.loading('Waiting for blockchain confirmation...', { id: tid });
-            const isOwner = await checkIdentityOwnership(address);
-            if (!isOwner) throw new Error("Identity verification failed on-chain.");
+            if (result.alreadyExists) {
+                toast.success('Identity already exists on-chain.', { id: tid });
+            } else {
+                toast.loading('Waiting for blockchain confirmation...', { id: tid });
+                const isOwner = await checkIdentityOwnership(address);
+                if (!isOwner) throw new Error("Identity verification failed on-chain.");
+                toast.success('Identity Soulbound Successfully!', { id: tid });
+            }
 
             localStorage.setItem("isOnboarded", "true");
             localStorage.setItem("walletAddress", address);
             localStorage.setItem("userRole", role || userProfile?.role);
 
             toast.loading('Finalizing protocol synchronization...', { id: tid });
-            await submitKyc('Aadhaar', aadhaar, kycImage, address, txHash);
+            await submitKyc('Aadhaar', aadhaar, kycImage, address, result.txHash || 'existing');
 
-            toast.success('Identity Soulbound Successfully!', { id: tid });
             setCurrentStep(7);
         } catch (err) {
-            toast.error('Minting failed. Check network.', { id: tid });
+            console.error("Mint error:", err);
+            toast.error(err.message || 'Minting failed. Check network.', { id: tid });
         } finally {
             setLoading(false);
         }
     };
+
+    // Auto-progress if already has NFT while on mint step
+    useEffect(() => {
+        if (currentStep === 6 && address) {
+            checkIdentityOwnership(address).then(hasNft => {
+                if (hasNft) {
+                    localStorage.setItem("isOnboarded", "true");
+                    setCurrentStep(7);
+                }
+            });
+        }
+    }, [currentStep, address]);
 
     return (
         <div className="min-h-screen bg-fintech-dark flex flex-col items-center justify-start py-12 md:py-24 px-4 md:px-6 font-sans text-slate-200 relative overflow-x-hidden">
@@ -282,9 +331,20 @@ const Onboarding = () => {
                             <p className="text-sm md:text-base text-slate-500 font-medium mb-10 md:mb-12">Anchor your verified identity to a Web3 wallet.</p>
                             <div className="premium-card !p-12 md:!p-16 border-2 border-dashed border-slate-800 bg-slate-950/50 mb-8 flex flex-col items-center group transition-all">
                                 <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-600/10 text-blue-600 rounded-3xl flex items-center justify-center mb-8 md:mb-10 group-hover:scale-110 transition-transform"><FiPocket size={40} /></div>
-                                <div className="w-full overflow-hidden flex justify-center">
+                                <div className="w-full overflow-hidden flex justify-center mb-8">
                                     <ConnectButton />
                                 </div>
+
+                                {walletConnected && (
+                                    <motion.button
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        onClick={handleWalletConnectionProceed}
+                                        className="btn-primary w-full !py-4 text-[10px] font-black uppercase tracking-[0.2em]"
+                                    >
+                                        Continue to Minting <FiArrowRight className="inline ml-2" />
+                                    </motion.button>
+                                )}
                             </div>
                         </motion.div>
                     )}
@@ -309,8 +369,40 @@ const Onboarding = () => {
                                     )}
                                 </div>
                             </div>
+                            <div className="mb-8">
+                                {chainId !== 11155111 ? (
+                                    <div className="flex flex-col items-center gap-3">
+                                        <div className="px-5 py-2.5 bg-red-500/10 text-red-500 border border-red-500/10 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                            <FiXCircle /> Wrong Network (Mainnet/Other)
+                                        </div>
+                                        <button
+                                            onClick={() => switchChain({ chainId: 11155111 })}
+                                            className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-400 underline underline-offset-4"
+                                        >
+                                            Switch to Sepolia
+                                        </button>
+                                    </div>
+                                ) : !walletClient ? (
+                                    <div className="px-5 py-2.5 bg-amber-500/10 text-amber-500 border border-amber-500/10 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 animate-pulse">
+                                        <FiActivity className="animate-spin" /> Signer Initializing...
+                                    </div>
+                                ) : (
+                                    <div className="px-5 py-2.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/10 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                        <FiCheckCircle /> Wallet Signer Ready
+                                    </div>
+                                )}
+                            </div>
+
                             <button onClick={handleMintNft} disabled={loading} className="btn-primary w-full max-w-sm !py-5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-xl">
-                                {loading ? <FiLoader className="animate-spin inline" /> : 'Claim Soulbound Identity'}
+                                {loading ? (
+                                    <><FiLoader className="animate-spin inline mr-2" /> Processing...</>
+                                ) : chainId !== 11155111 ? (
+                                    'Switch to Sepolia'
+                                ) : !walletClient ? (
+                                    'Reconnecting...'
+                                ) : (
+                                    'Claim Soulbound Identity'
+                                )}
                             </button>
                         </motion.div>
                     )}

@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
                 const data = response.data.data;
                 setUserProfile(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
-                return { success: true };
+                return { success: true, user: data };
             }
         } catch (error) {
             console.error("Login failed", error);
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }) => {
                 const data = response.data.data;
                 setUserProfile(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
-                return { success: true };
+                return { success: true, user: data };
             }
         } catch (error) {
             console.error("Wallet login failed", error);
@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }) => {
                 const data = response.data.data;
                 setUserProfile(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
-                return { success: true };
+                return { success: true, user: data };
             }
         } catch (error) {
             console.error("Registration failed", error);
@@ -116,12 +116,18 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = () => {
+        console.log("[Auth] Initiating session termination and wallet disconnection...");
+        try {
+            disconnect();
+        } catch (e) {
+            console.error("[Auth] Wallet disconnection failed during logout", e);
+        }
         localStorage.removeItem('userInfo');
         localStorage.removeItem('isOnboarded');
         localStorage.removeItem('walletAddress');
         localStorage.removeItem('userRole');
         setUserProfile(null);
-        disconnect(); // Also disconnect wagmi wallet if any
+        console.log("[Auth] Session cleared.");
     };
 
     const updateRole = async (role) => {

@@ -3,10 +3,11 @@ import addresses from './contracts/addresses.json';
 
 const IdentityABI = [
     "function mintIdentity() external",
-    "function balanceOf(address owner) view returns (uint256)"
+    "function balanceOf(address owner) view returns (uint256)",
+    "error Soulbound_AlreadyHasIdentity()"
 ];
 
-const SEPOLIA_IDENTITY_ADDRESS = addresses.identity;
+const IDENTITY_CONTRACT_ADDRESS = addresses.identity;
 
 export const getBlockchainSigner = async () => {
     if (!window.ethereum) throw new Error("MetaMask not found.");
@@ -17,7 +18,7 @@ export const getBlockchainSigner = async () => {
 
 export const getIdentityContract = async (signer) => {
     return new ethers.Contract(
-        SEPOLIA_IDENTITY_ADDRESS,
+        IDENTITY_CONTRACT_ADDRESS,
         IdentityABI,
         signer
     );
@@ -25,29 +26,67 @@ export const getIdentityContract = async (signer) => {
 
 export const mintIdentity = async (signer, onSent) => {
     if (!signer) throw new Error("No signer provided");
-    const identityContract = await getIdentityContract(signer);
 
-    console.log("[Blockchain] Initiating Identity Mint with signer:", signer.address);
+    const identityContract = new ethers.Contract(
+        IDENTITY_CONTRACT_ADDRESS,
+        IdentityABI,
+        signer
+    );
+
+    const userAddr = await signer.getAddress();
+
+    // 1. Verify we are on Sepolia (ChainID 11155111)
+    const network = await signer.provider.getNetwork();
+    if (network.chainId !== 11155111n && network.chainId !== 11155111) {
+        throw new Error(`Incorrect Network: Please switch your wallet to Sepolia (Current Chain ID: ${network.chainId})`);
+    }
+
+    // 2. Verify contract code exists
+    const code = await signer.provider.getCode(IDENTITY_CONTRACT_ADDRESS);
+    if (code === "0x" || code === "0x0") {
+        throw new Error("Identity Contract not found at configured address on Sepolia. Please verify deployment.");
+    }
+
+    console.log("[Blockchain] Checking if identity already exists for:", userAddr);
+    const balance = await identityContract.balanceOf(userAddr);
+    if (balance > 0n) {
+        console.log("[Blockchain] Identity already exists. Skipping mint.");
+        return {
+            alreadyExists: true,
+            address: userAddr
+        };
+    }
+
+    console.log("[Blockchain] Initiating Identity Mint to contract:", IDENTITY_CONTRACT_ADDRESS);
     try {
+        // We use estimateGas explicitly to catch the revert reason early if possible
+        try {
+            await identityContract.mintIdentity.estimateGas();
+        } catch (gasErr) {
+            console.warn("[Blockchain] Gas estimation failed, transaction will likely revert:", gasErr);
+            if (gasErr.message.includes("Soulbound_AlreadyHasIdentity") || gasErr.message.includes("AlreadyHasIdentity")) {
+                throw new Error("This wallet already owns a Soulbound Identity.");
+            }
+        }
+
         const tx = await identityContract.mintIdentity();
         console.log("[Blockchain] Mint transaction sent:", tx.hash);
+        console.log("[Blockchain] Transaction 'to' address:", tx.to);
+
         if (onSent) onSent(tx.hash);
 
         const receipt = await tx.wait();
         console.log("[Blockchain] Mint confirmed in block:", receipt.blockNumber);
 
-        // Verify ownership
-        const balance = await identityContract.balanceOf(signer.address);
-        if (balance === 0n) {
-            throw new Error("Mint completed but identity token not found. Please try again or check Etherscan.");
-        }
-
         return {
             receipt,
             txHash: tx.hash,
-            address: signer.address
+            address: userAddr
         };
     } catch (err) {
+        if (err.message.includes("Soulbound_AlreadyHasIdentity")) {
+            return { alreadyExists: true, address: userAddr };
+        }
         console.error("[Blockchain] Minting error:", err);
         throw err;
     }
@@ -56,10 +95,17 @@ export const mintIdentity = async (signer, onSent) => {
 export const checkIdentityOwnership = async (userAddress) => {
     if (!userAddress) return false;
     try {
-        // Use public RPC for ownership check to avoid triggering wallet prompts
         const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+
+        // 1. Verify code exists at the address to prevent decoding errors
+        const code = await provider.getCode(IDENTITY_CONTRACT_ADDRESS);
+        if (code === "0x" || code === "0x0") {
+            console.warn("[Blockchain] No contract code found at Identity address on Sepolia. Address might be wrong or RPC is out of sync.");
+            return false;
+        }
+
         const identityContract = new ethers.Contract(
-            SEPOLIA_IDENTITY_ADDRESS,
+            IDENTITY_CONTRACT_ADDRESS,
             IdentityABI,
             provider
         );

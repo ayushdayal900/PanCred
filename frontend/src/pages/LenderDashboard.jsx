@@ -61,11 +61,16 @@ const LenderDashboard = () => {
             if (res.data.success) {
                 const loanData = res.data.data;
                 const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
-                const trustRegistry = new ethers.Contract(addresses.trustScore, trustScoreAbi, provider);
+
+                // Verify TrustScore contract code exists
+                const code = await provider.getCode(addresses.trustScore);
+                const hasRegistry = (code !== "0x" && code !== "0x0");
+
+                const trustRegistry = hasRegistry ? new ethers.Contract(addresses.trustScore, trustScoreAbi, provider) : null;
 
                 const enhancedLoans = await Promise.all(loanData.map(async (loan) => {
                     try {
-                        if (loan.borrower?.walletAddress) {
+                        if (hasRegistry && trustRegistry && loan.borrower?.walletAddress) {
                             const onChainScore = await trustRegistry.getTrustScore(loan.borrower.walletAddress);
                             return { ...loan, onChainTrustScore: Number(onChainScore) };
                         }
@@ -99,6 +104,13 @@ const LenderDashboard = () => {
 
             const signer = await clientToSigner(config, chainId);
             if (!signer) throw new Error("Failed to get signer");
+
+            // Verify Microfinance contract code exists
+            const code = await signer.provider.getCode(addresses.microfinance);
+            if (code === "0x" || code === "0x0") {
+                throw new Error("Loan Contract (Microfinance) not found at configured address on Sepolia.");
+            }
+
             const contract = new ethers.Contract(addresses.microfinance, microfinanceAbi, signer);
             const principal = ethers.parseEther(amount.toString());
 

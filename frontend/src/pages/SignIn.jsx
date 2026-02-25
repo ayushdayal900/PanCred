@@ -1,56 +1,119 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiPocket, FiLoader, FiArrowLeft, FiShield, FiActivity, FiKey } from 'react-icons/fi';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiMail, FiLock, FiLoader, FiArrowLeft, FiShield, FiArrowRight, FiCheckCircle, FiKey } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount, useConfig } from 'wagmi';
+import { checkIdentityOwnership } from '../blockchainService';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 
 const SignIn = () => {
     const navigate = useNavigate();
-    const { walletLogin, userProfile, isAuthenticated } = useAuth();
-    const { address, isConnected: walletConnected } = useAccount();
+    const { login, isAuthenticated, userProfile } = useAuth();
 
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [otp, setOtp] = useState('');
+    const [showOTP, setShowOTP] = useState(false);
+    const [emailVerified, setEmailVerified] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
 
+    // Cooldown timer logic
     useEffect(() => {
-        console.log("--- SignIn Debug ---");
-        console.log("Wallet Connected:", walletConnected);
-        console.log("Address:", address);
-        console.log("Authenticated:", isAuthenticated);
-    }, [walletConnected, address, isAuthenticated]);
+        let timer;
+        if (resendCooldown > 0) {
+            timer = setInterval(() => {
+                setResendCooldown(prev => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [resendCooldown]);
 
-    const handleProtocolLogin = async () => {
-        if (walletConnected && address) {
-            const tid = toast.loading('Synchronizing with protocol...');
-            try {
-                setLoading(true);
-                // 1. Backend Login
-                const loginResult = await walletLogin(address);
-                if (!loginResult.success) {
-                    throw new Error("Authorization rejected.");
-                }
+    const handleSendOTP = async () => {
+        if (!email) return toast.error('Enter email first');
+        setLoading(true);
+        const tid = toast.loading('Sending security code...');
+        try {
+            const response = await axios.post('http://localhost:5000/auth/send-otp', { email });
+            if (response.data.success) {
+                toast.success('OTP sent to your email', { id: tid });
+                setShowOTP(true);
+                setResendCooldown(30);
+            } else {
+                toast.error(response.data.message || 'Failed to send OTP', { id: tid });
+            }
+        } catch (err) {
+            toast.error('Service unavailable. Try again.', { id: tid });
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    const handleVerifyOTP = async () => {
+        if (otp.length !== 6) return toast.error('Enter 6-digit code');
+        setLoading(true);
+        const tid = toast.loading('Verifying code...');
+        try {
+            const response = await axios.post('http://localhost:5000/auth/verify-otp', { email, otp });
+            if (response.data.verified) {
+                toast.success('Identity Anchor Verified!', { id: tid });
+                setEmailVerified(true);
+            } else {
+                toast.error(response.data.message || 'Invalid code', { id: tid });
+            }
+        } catch (err) {
+            toast.error('Verification failed', { id: tid });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        if (!emailVerified) {
+            return toast.error('Please verify your email with OTP first.');
+        }
+
+        setLoading(true);
+        const tid = toast.loading('Synchronizing with protocol...');
+        try {
+            const result = await login(email, password);
+            if (result.success) {
                 toast.success('Authorized. Aligning identity...', { id: tid });
 
-                // Redirection will be handled by App.jsx or we can do it here
-                const isOnboarded = localStorage.getItem("isOnboarded") === "true";
+                // Check if they need onboarding or can go to dashboard
+                // We check on-chain if a wallet is already linked
+                const profile = result.user || userProfile; // result.user might be returned by login
+
+                // We'll use a small timeout to let the AuthContext update if result.user isn't there
+                const walletAddress = profile?.walletAddress || localStorage.getItem('walletAddress');
+
+                let isOnboarded = false;
+                if (walletAddress) {
+                    toast.loading('Checking on-chain Soulbound ID...', { id: tid });
+                    isOnboarded = await checkIdentityOwnership(walletAddress);
+                }
+
                 if (isOnboarded) {
+                    localStorage.setItem("isOnboarded", "true");
                     navigate('/dashboard');
                 } else {
+                    localStorage.removeItem("isOnboarded");
                     navigate('/onboarding');
                 }
-            } catch (err) {
-                toast.error(err.message || 'Verification failed.', { id: tid });
-            } finally {
-                setLoading(false);
+            } else {
+                toast.error(result.message || 'Login failed', { id: tid });
             }
+        } catch (err) {
+            toast.error('Connection error.', { id: tid });
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-fintech-dark flex items-center justify-center px-4 md:px-6 relative overflow-hidden">
+        <div className="min-h-screen bg-fintech-dark flex flex-col items-center justify-center px-4 md:px-6 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] aspect-square bg-blue-600/10 rounded-full blur-[120px]"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] aspect-square bg-fintech-accent/5 rounded-full blur-[120px]"></div>
@@ -73,96 +136,105 @@ const SignIn = () => {
                         <FiShield size={32} className="md:w-10 md:h-10" />
                     </div>
                     <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter italic">Authorize Access</h2>
-                    <p className="text-sm md:text-base text-slate-500 font-medium font-sans italic">Connect your wallet to anchor your protocol identity.</p>
+                    <p className="text-sm md:text-base text-slate-500 font-medium font-sans italic">Enter your protocol credentials to continue.</p>
                 </div>
 
                 <div className="premium-card !p-6 md:!p-8">
-                    <ConnectButton.Custom>
-                        {({
-                            account,
-                            chain,
-                            openConnectModal,
-                            openChainModal,
-                            mounted,
-                        }) => {
-                            const ready = mounted;
-                            const connected = ready && account && chain;
-
-                            return (
-                                <div
-                                    {...(!ready && {
-                                        'aria-hidden': true,
-                                        'style': {
-                                            opacity: 0,
-                                            pointerEvents: 'none',
-                                            userSelect: 'none',
-                                        },
-                                    })}
-                                >
-                                    {(() => {
-                                        if (!connected) {
-                                            return (
-                                                <button
-                                                    onClick={openConnectModal}
-                                                    type="button"
-                                                    className="btn-primary w-full !py-6 text-[10px] md:text-xs font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 shadow-xl"
-                                                >
-                                                    <FiPocket size={20} /> Establish Connection
-                                                </button>
-                                            );
-                                        }
-
-                                        if (chain.unsupported) {
-                                            return (
-                                                <button
-                                                    onClick={openChainModal}
-                                                    type="button"
-                                                    className="w-full bg-red-600/20 border border-red-600/50 text-red-500 font-black py-6 rounded-2xl flex items-center justify-center gap-3 shadow-xl transition-all text-[10px] uppercase tracking-widest"
-                                                >
-                                                    Unsupported Protocol Net
-                                                </button>
-                                            );
-                                        }
-
-                                        return (
-                                            <div className="space-y-6">
-                                                <div className="p-5 md:p-6 bg-slate-950 rounded-2xl border border-slate-900 flex items-center justify-between shadow-inner">
-                                                    <div className="text-left overflow-hidden">
-                                                        <p className="text-[8px] md:text-[9px] text-slate-600 font-black uppercase tracking-widest mb-1">Vault Linked</p>
-                                                        <p className="text-white font-black truncate italic">{account.displayName}</p>
-                                                    </div>
-                                                    <div className="w-12 h-12 flex-shrink-0 bg-blue-600/5 rounded-xl flex items-center justify-center text-blue-500 shadow-md">
-                                                        <FiActivity />
-                                                    </div>
-                                                </div>
-
-                                                {/* Explicit Login Step */}
-                                                {
-                                                    !isAuthenticated && (
-                                                        <button
-                                                            onClick={handleProtocolLogin}
-                                                            disabled={loading}
-                                                            className="btn-primary w-full !py-6 text-[10px] md:text-xs font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 bg-blue-600 shadow-lg shadow-blue-600/20 animate-pulse hover:animate-none"
-                                                        >
-                                                            {loading ? <FiLoader className="animate-spin" /> : <><FiKey size={20} /> Finalize Protocol Authorization</>}
-                                                        </button>
-                                                    )
-                                                }
-
-                                                {
-                                                    isAuthenticated && (
-                                                        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-center">
-                                                            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Protocol Sync Active</p>
-                                                        </div>
-                                                    )
-                                                }
-                                            </div>
-                                        );
-                                    })()}
+                    <form onSubmit={handleLogin} className="space-y-6">
+                        {!showOTP && (
+                            <div className="space-y-5">
+                                <div>
+                                    <label className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 block mb-3 px-1">Email Anchor</label>
+                                    <div className="relative">
+                                        <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
+                                        <input
+                                            type="email"
+                                            required
+                                            className="w-full bg-fintech-dark border border-fintech-border rounded-xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium placeholder:text-slate-800 shadow-inner text-sm"
+                                            placeholder="you@protocol.com"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                        />
+                                    </div>
                                 </div>
-                            );
-                        }}
-                    </ConnectButton.Custom>
+                                <div>
+                                    <label className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 block mb-3 px-1">Secure Keyphrase</label>
+                                    <div className="relative">
+                                        <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
+                                        <input
+                                            type="password"
+                                            required
+                                            className="w-full bg-fintech-dark border border-fintech-border rounded-xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-blue-500 transition-all font-medium placeholder:text-slate-800 shadow-inner text-sm"
+                                            placeholder="••••••••"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleSendOTP}
+                                    disabled={loading}
+                                    className="btn-primary w-full !py-5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl"
+                                >
+                                    {loading ? <FiLoader className="animate-spin" /> : <><FiKey size={18} /> Initialize MFA Verification</>}
+                                </button>
+                            </div>
+                        )}
+
+                        {showOTP && !emailVerified && (
+                            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6 py-2">
+                                <div className="text-center">
+                                    <p className="text-xs text-blue-500 font-black uppercase tracking-widest mb-2">MFA Required</p>
+                                    <p className="text-slate-400 text-[11px] font-medium italic">Sent to <span className="text-white">{email}</span></p>
+                                </div>
+                                <input
+                                    type="text"
+                                    maxLength={6}
+                                    placeholder="000000"
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl py-5 text-2xl font-mono tracking-[0.5em] text-white text-center outline-none focus:border-blue-600 transition-all shadow-inner"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowOTP(false)}
+                                        className="py-4 bg-slate-900 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-white transition-all"
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleVerifyOTP}
+                                        disabled={loading}
+                                        className="py-4 bg-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-blue-500/20"
+                                    >
+                                        Verify
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {emailVerified && (
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3">
+                                    <FiCheckCircle className="text-emerald-500 shrink-0" size={20} />
+                                    <div className="text-left">
+                                        <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">MFA Clear</p>
+                                        <p className="text-white text-[11px] font-medium truncate">{email}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="btn-primary w-full !py-6 text-[10px] md:text-xs font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 bg-blue-600 shadow-xl animate-pulse hover:animate-none"
+                                >
+                                    {loading ? <FiLoader className="animate-spin" /> : <>Finalize Authorization <FiArrowRight size={18} /></>}
+                                </button>
+                            </motion.div>
+                        )}
+                    </form>
 
                     <div className="mt-8 md:mt-10 pt-8 border-t border-slate-900 text-center">
                         <p className="text-slate-500 text-xs font-medium italic">
@@ -170,8 +242,8 @@ const SignIn = () => {
                         </p>
                     </div>
                 </div>
-            </motion.div >
-        </div >
+            </motion.div>
+        </div>
     );
 };
 

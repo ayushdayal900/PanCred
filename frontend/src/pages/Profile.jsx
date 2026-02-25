@@ -8,7 +8,8 @@ import {
     FiActivity,
     FiExternalLink,
     FiCopy,
-    FiStar
+    FiStar,
+    FiCheckCircle
 } from 'react-icons/fi';
 import { useAccount } from 'wagmi';
 import { checkIdentityOwnership } from '../blockchainService';
@@ -38,9 +39,16 @@ const Profile = () => {
                     setHasNft(owned);
 
                     const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
-                    const trustContract = new ethers.Contract(addresses.trustScore, trustScoreAbi, provider);
-                    const score = await trustContract.getTrustScore(walletAddr);
-                    setOnChainTrustScore(Number(score));
+
+                    // Verify TrustScore contract code exists
+                    const code = await provider.getCode(addresses.trustScore);
+                    if (code !== "0x" && code !== "0x0") {
+                        const trustContract = new ethers.Contract(addresses.trustScore, trustScoreAbi, provider);
+                        const score = await trustContract.getTrustScore(walletAddr);
+                        setOnChainTrustScore(Number(score));
+                    } else {
+                        console.warn("[Profile] TrustScore Registry not found on-chain. Skipping score fetch.");
+                    }
                 } catch (err) {
                     console.error("Chain Data fetch error:", err);
                 } finally {

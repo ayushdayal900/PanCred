@@ -76,16 +76,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
-          <Route
-            path="/signin"
-            element={
-              isAuthenticated ? (
-                isOnboarded ? <Navigate to="/dashboard" replace /> : <Navigate to="/onboarding" replace />
-              ) : (
-                <SignIn />
-              )
-            }
-          />
+          <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<Signup />} />
 
           {/* Steps & Onboarding */}

@@ -121,6 +121,13 @@ const BorrowerDashboard = () => {
 
             const signer = await clientToSigner(config, chainId);
             if (!signer) throw new Error("Failed to get signer");
+
+            // Verify Microfinance contract code exists
+            const code = await signer.provider.getCode(addresses.microfinance);
+            if (code === "0x" || code === "0x0") {
+                throw new Error("Loan Contract (Microfinance) not found at configured address on Sepolia.");
+            }
+
             const contract = new ethers.Contract(addresses.microfinance, microfinanceAbi, signer);
 
             const principal = ethers.parseEther(amount.toString());
