@@ -10,6 +10,7 @@ connectRedis();
 const app = express();
 const userRoutes = require('./routes/userRoutes');
 const loanRoutes = require('./routes/loanRoutes');
+const authRoutes = require('./routes/authRoutes');
 const port = process.env.PORT || 5000;
 const { connectProvider, listenToContractEvents } = require('./services/blockchainService');
 
@@ -27,6 +28,7 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // Core API Routes
 app.use('/api/users', userRoutes);
 app.use('/api/loans', loanRoutes);
+app.use('/auth', authRoutes);
 
 // Basic Route for health check
 app.get('/', (req, res) => {

@@ -8,6 +8,41 @@ export const api = axios.create({
     baseURL: 'http://localhost:5000/api'
 });
 
+// Add a request interceptor to always attach the token
+api.interceptors.request.use(
+    (config) => {
+        const userInfo = localStorage.getItem('userInfo');
+        if (userInfo) {
+            try {
+                const { token } = JSON.parse(userInfo);
+                if (token) {
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
+            } catch (e) {
+                console.error("Failed to parse userInfo for interceptor", e);
+            }
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Add a response interceptor to handle 401s (token expire/invalid)
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            console.warn("Unauthorized detected. Clearing session.");
+            localStorage.removeItem('userInfo');
+            localStorage.removeItem('isOnboarded');
+            // We can't use navigate here because we are outside a component, 
+            // but the App.jsx will detect isAuthenticated: false on next render
+            window.location.href = '/signin';
+        }
+        return Promise.reject(error);
+    }
+);
+
 export const AuthProvider = ({ children }) => {
     const [userProfile, setUserProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -16,9 +51,12 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const userInfo = localStorage.getItem('userInfo');
         if (userInfo) {
-            const parsedInfo = JSON.parse(userInfo);
-            setUserProfile(parsedInfo);
-            api.defaults.headers.common['Authorization'] = `Bearer ${parsedInfo.token}`;
+            try {
+                setUserProfile(JSON.parse(userInfo));
+            } catch (e) {
+                console.error("Failed to parse userInfo in useEffect", e);
+                localStorage.removeItem('userInfo');
+            }
         }
         setLoading(false);
     }, []);
@@ -31,7 +69,6 @@ export const AuthProvider = ({ children }) => {
                 const data = response.data.data;
                 setUserProfile(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
-                api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
                 return { success: true };
             }
         } catch (error) {
@@ -50,7 +87,6 @@ export const AuthProvider = ({ children }) => {
                 const data = response.data.data;
                 setUserProfile(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
-                api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
                 return { success: true };
             }
         } catch (error) {
@@ -64,12 +100,11 @@ export const AuthProvider = ({ children }) => {
     const register = async (name, email, password) => {
         try {
             setLoading(true);
-            const response = await axios.post('http://localhost:5000/api/users/register', { name, email, password });
+            const response = await api.post('/users/register', { name, email, password });
             if (response.data.success) {
                 const data = response.data.data;
                 setUserProfile(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
-                axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
                 return { success: true };
             }
         } catch (error) {
@@ -86,7 +121,6 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('walletAddress');
         localStorage.removeItem('userRole');
         setUserProfile(null);
-        delete axios.defaults.headers.common['Authorization'];
         disconnect(); // Also disconnect wagmi wallet if any
     };
 
@@ -115,7 +149,6 @@ export const AuthProvider = ({ children }) => {
                 txHash
             });
 
-
             if (response.data.success) {
                 const data = response.data.data;
                 setUserProfile(data);
@@ -132,7 +165,7 @@ export const AuthProvider = ({ children }) => {
         <AuthContext.Provider value={{
             userProfile,
             loading,
-            isAuthenticated: !!userProfile, // Renamed from isConnected to avoid conflict with wagmi
+            isAuthenticated: !!userProfile,
             login,
             walletLogin,
             register,

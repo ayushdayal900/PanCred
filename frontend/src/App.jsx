@@ -16,8 +16,13 @@ import { checkIdentityOwnership } from './blockchainService';
 import { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 
-const ProtectedRoute = ({ children, isIdentityVerified, loading, isAuthenticated }) => {
+const ProtectedRoute = ({ children, loading, isAuthenticated, walletConnected }) => {
   const isOnboarded = localStorage.getItem("isOnboarded") === "true";
+
+  console.log("--- ProtectedRoute Debug ---");
+  console.log("Wallet Connected:", walletConnected);
+  console.log("Authenticated:", isAuthenticated);
+  console.log("Onboarded:", isOnboarded);
 
   if (loading) {
     return (
@@ -30,40 +35,38 @@ const ProtectedRoute = ({ children, isIdentityVerified, loading, isAuthenticated
     );
   }
 
+  // 1. If not authenticated, always go to signin
   if (!isAuthenticated) return <Navigate to="/signin" replace />;
 
-  if (!isIdentityVerified && !isOnboarded) {
+  // 2. If authenticated but not onboarded, go to onboarding
+  if (!isOnboarded) {
     return <Navigate to="/onboarding" replace />;
   }
 
+  // 3. Fully authorized
   return <Layout>{children}</Layout>;
 };
 
 function App() {
-  const { isAuthenticated, userProfile, loading: authLoading } = useAuth();
-  const { address, isConnected } = useAccount();
-  const [isIdentityVerified, setIsIdentityVerified] = useState(false);
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isConnected: walletConnected } = useAccount();
   const [appLoading, setAppLoading] = useState(true);
 
   // Helper to determine if user is fully onboarded
-  const localOnboarded = localStorage.getItem("isOnboarded") === "true";
+  const isOnboarded = localStorage.getItem("isOnboarded") === "true";
 
   useEffect(() => {
-    const verifyIdentity = async () => {
-      if (isConnected && address) {
-        const hasNFT = await checkIdentityOwnership(address);
-        setIsIdentityVerified(hasNFT);
-        if (hasNFT) {
-          localStorage.setItem("isOnboarded", "true");
-        }
-      }
-      setAppLoading(false);
-    };
+    console.log("--- App State Refresh ---");
+    console.log("Wallet Connected:", walletConnected);
+    console.log("Authenticated:", isAuthenticated);
+    console.log("Onboarded:", isOnboarded);
 
-    if (!authLoading) {
-      verifyIdentity();
-    }
-  }, [isConnected, address, authLoading]);
+    // Just a small delay to ensure auth state is settled
+    const timer = setTimeout(() => {
+      setAppLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, walletConnected, isOnboarded]);
 
   const combinedLoading = authLoading || appLoading;
 
@@ -73,7 +76,16 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/signin" element={<SignIn />} />
+          <Route
+            path="/signin"
+            element={
+              isAuthenticated ? (
+                isOnboarded ? <Navigate to="/dashboard" replace /> : <Navigate to="/onboarding" replace />
+              ) : (
+                <SignIn />
+              )
+            }
+          />
           <Route path="/signup" element={<Signup />} />
 
           {/* Steps & Onboarding */}
@@ -81,7 +93,7 @@ function App() {
             path="/onboarding"
             element={
               isAuthenticated ? (
-                (localOnboarded || isIdentityVerified) ? (
+                isOnboarded ? (
                   <Navigate to="/dashboard" replace />
                 ) : (
                   <Onboarding />
@@ -98,7 +110,7 @@ function App() {
             element={
               <ProtectedRoute
                 isAuthenticated={isAuthenticated}
-                isIdentityVerified={isIdentityVerified}
+                walletConnected={walletConnected}
                 loading={combinedLoading}
               >
                 <Dashboard />
@@ -110,7 +122,7 @@ function App() {
             element={
               <ProtectedRoute
                 isAuthenticated={isAuthenticated}
-                isIdentityVerified={isIdentityVerified}
+                walletConnected={walletConnected}
                 loading={combinedLoading}
               >
                 <Profile />
@@ -122,7 +134,7 @@ function App() {
             element={
               <ProtectedRoute
                 isAuthenticated={isAuthenticated}
-                isIdentityVerified={isIdentityVerified}
+                walletConnected={walletConnected}
                 loading={combinedLoading}
               >
                 <Lend />
@@ -134,7 +146,7 @@ function App() {
             element={
               <ProtectedRoute
                 isAuthenticated={isAuthenticated}
-                isIdentityVerified={isIdentityVerified}
+                walletConnected={walletConnected}
                 loading={combinedLoading}
               >
                 <Borrow />
@@ -147,7 +159,7 @@ function App() {
             element={
               <ProtectedRoute
                 isAuthenticated={isAuthenticated}
-                isIdentityVerified={isIdentityVerified}
+                walletConnected={walletConnected}
                 loading={combinedLoading}
               >
                 <HowItWorks />

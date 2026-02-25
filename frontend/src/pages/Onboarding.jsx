@@ -14,7 +14,8 @@ import {
     FiBriefcase,
     FiCreditCard,
     FiLoader,
-    FiExternalLink
+    FiExternalLink,
+    FiXCircle
 } from 'react-icons/fi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useConfig } from 'wagmi';
@@ -23,26 +24,29 @@ import { mintIdentity, checkIdentityOwnership } from '../blockchainService';
 import toast from 'react-hot-toast';
 
 const Onboarding = () => {
-    const { userProfile, updateRole, submitKyc } = useAuth();
+    const { userProfile, updateRole, submitKyc, logout } = useAuth();
     const navigate = useNavigate();
-    const { address, isConnected, chainId } = useAccount();
+    const { address, isConnected: walletConnected, chainId } = useAccount();
     const config = useConfig();
 
     const [currentStep, setCurrentStep] = useState(2);
     const [loading, setLoading] = useState(false);
 
+    const isOnboarded = localStorage.getItem("isOnboarded") === "true";
+    const isAuthenticated = !!userProfile;
+
     useEffect(() => {
-        if (!userProfile) {
+        console.log("--- Onboarding Debug ---");
+        console.log("Wallet Connected:", walletConnected);
+        console.log("Authenticated:", isAuthenticated);
+        console.log("Onboarded:", isOnboarded);
+
+        if (!isAuthenticated) {
             navigate('/signin');
             return;
         }
 
-        const localOnboarded = localStorage.getItem("isOnboarded") === "true";
-        if (userProfile.kycStatus === 'Verified' || localOnboarded) {
-            setCurrentStep(7);
-            return;
-        }
-
+        // Only set step based on profile if we are NOT already onboarded
         if (currentStep === 2) {
             if (userProfile?.role === 'Unassigned') {
                 setCurrentStep(2);
@@ -52,7 +56,15 @@ const Onboarding = () => {
                 setCurrentStep(5);
             }
         }
-    }, [userProfile]);
+    }, [userProfile, isAuthenticated, isOnboarded, walletConnected]);
+
+    const handleExitOnboarding = () => {
+        const confirmExit = window.confirm("Are you sure you want to exit? Your protocol initialization progress will be reset.");
+        if (confirmExit) {
+            localStorage.removeItem("isOnboarded");
+            navigate('/signin');
+        }
+    };
 
     const [role, setRole] = useState('');
     const [aadhaar, setAadhaar] = useState('');
@@ -67,10 +79,10 @@ const Onboarding = () => {
     const steps = [
         { id: 2, title: 'Role', icon: <FiBriefcase /> },
         { id: 3, title: 'Identity', icon: <FiShield /> },
-        { id: 4, title: 'Liveliness', icon: <FiCamera /> },
+        { id: 4, title: 'Bio', icon: <FiCamera /> },
         { id: 5, title: 'Wallet', icon: <FiPocket /> },
         { id: 6, title: 'Mint', icon: <FiCreditCard /> },
-        { id: 7, title: 'Success', icon: <FiCheckCircle /> },
+        { id: 7, title: 'Done', icon: <FiCheckCircle /> },
     ];
 
     const handleRoleSelect = async (selectedRole) => {
@@ -124,10 +136,10 @@ const Onboarding = () => {
     };
 
     useEffect(() => {
-        if (currentStep === 5 && isConnected && address) {
+        if (currentStep === 5 && walletConnected && address) {
             setCurrentStep(6);
         }
-    }, [currentStep, isConnected, address]);
+    }, [currentStep, walletConnected, address]);
 
     const handleMintNft = async () => {
         setLoading(true);
@@ -161,50 +173,59 @@ const Onboarding = () => {
     };
 
     return (
-        <div className="min-h-screen bg-fintech-dark flex flex-col items-center justify-center p-6 pt-32 font-sans text-slate-200 relative overflow-hidden">
+        <div className="min-h-screen bg-fintech-dark flex flex-col items-center justify-start py-12 md:py-24 px-4 md:px-6 font-sans text-slate-200 relative overflow-x-hidden">
             <div className="absolute top-0 left-0 w-full h-full pointer-events-none -z-10">
-                <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 rounded-full blur-[120px]"></div>
-                <div className="absolute bottom-[-20%] left-[-10%] w-[60%] h-[60%] bg-fintech-accent/5 rounded-full blur-[120px]"></div>
+                <div className="absolute top-[-20%] right-[-10%] w-[60%] aspect-square bg-blue-600/10 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-[-20%] left-[-10%] w-[60%] aspect-square bg-fintech-accent/5 rounded-full blur-[120px]"></div>
             </div>
 
-            <div className="w-full max-w-4xl mb-16 px-4">
-                <div className="flex justify-between items-center mb-6">
+            {/* Exit Button */}
+            <button
+                onClick={handleExitOnboarding}
+                className="absolute top-6 left-6 md:top-10 md:left-10 text-slate-600 hover:text-white flex items-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest group"
+            >
+                <FiXCircle className="group-hover:rotate-90 transition-transform duration-300" /> Exit Protocol Initialization
+            </button>
+
+            {/* Stepper Container */}
+            <div className="w-full max-w-4xl mb-12 md:mb-16">
+                <div className="flex justify-between items-center mb-6 overflow-x-auto no-scrollbar pb-4 md:pb-0 px-2 gap-8 md:gap-0">
                     {steps.map((s) => (
-                        <div key={s.id} className="flex flex-col items-center group">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 transition-all duration-700 ${currentStep >= s.id ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-900 border-slate-800 text-slate-600'}`}>
+                        <div key={s.id} className="flex flex-col items-center group flex-shrink-0">
+                            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center border-2 transition-all duration-700 ${currentStep >= s.id ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-900 border-slate-800 text-slate-600'}`}>
                                 {currentStep > s.id ? <FiCheckCircle size={18} /> : s.icon}
                             </div>
-                            <span className={`text-[9px] mt-3 font-black uppercase tracking-widest ${currentStep >= s.id ? 'text-white' : 'text-slate-700 group-hover:text-slate-500'}`}>
+                            <span className={`text-[8px] md:text-[9px] mt-3 font-black uppercase tracking-widest ${currentStep >= s.id ? 'text-white' : 'text-slate-700'}`}>
                                 {s.title}
                             </span>
                         </div>
                     ))}
                 </div>
-                <div className="h-1.5 w-full bg-slate-950 rounded-full p-0.5 border border-slate-900 overflow-hidden">
+                <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
                     <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
-                        className="h-full bg-blue-600 rounded-full shadow-[0_0_15px_rgba(37,99,235,0.3)]"
+                        className="h-full bg-blue-600 rounded-full shadow-lg shadow-blue-600/30"
                     />
                 </div>
             </div>
 
-            <div className="w-full max-w-3xl premium-card !p-12 relative">
+            <div className="w-full max-w-3xl">
                 <AnimatePresence mode="wait">
                     {/* ROLE */}
                     {currentStep === 2 && (
                         <motion.div key="s2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center">
-                            <h2 className="text-4xl font-black text-white mb-2">Primary Access Role</h2>
-                            <p className="text-slate-500 font-medium mb-12">How will you participate in the Aamba protocol?</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <button onClick={() => handleRoleSelect('Lender')} className="group p-10 bg-slate-900/50 border border-slate-800 rounded-3xl hover:border-blue-600 transition-all text-left">
-                                    <div className="w-14 h-14 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><FiBriefcase size={28} /></div>
-                                    <h3 className="text-2xl font-black text-white mb-2 italic">Lender</h3>
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter italic">Primary Access Role</h2>
+                            <p className="text-sm md:text-base text-slate-500 font-medium mb-10 md:mb-12">How will you participate in the Aamba protocol?</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 text-left">
+                                <button onClick={() => handleRoleSelect('Lender')} className="group p-8 md:p-10 bg-slate-900/50 border border-slate-800 rounded-[2.5rem] hover:border-blue-600 transition-all">
+                                    <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><FiBriefcase size={28} /></div>
+                                    <h3 className="text-xl md:text-2xl font-black text-white mb-2 italic">Lender</h3>
                                     <p className="text-xs text-slate-500 leading-relaxed font-medium">Deploy capital to secure, protocol-verified loan requests and earn transparent interest.</p>
                                 </button>
-                                <button onClick={() => handleRoleSelect('Borrower')} className="group p-10 bg-slate-900/50 border border-slate-800 rounded-3xl hover:border-blue-600 transition-all text-left">
-                                    <div className="w-14 h-14 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><FiUser size={28} /></div>
-                                    <h3 className="text-2xl font-black text-white mb-2 italic">Borrower</h3>
+                                <button onClick={() => handleRoleSelect('Borrower')} className="group p-8 md:p-10 bg-slate-900/50 border border-slate-800 rounded-[2.5rem] hover:border-blue-600 transition-all">
+                                    <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><FiUser size={28} /></div>
+                                    <h3 className="text-xl md:text-2xl font-black text-white mb-2 italic">Borrower</h3>
                                     <p className="text-xs text-slate-500 leading-relaxed font-medium">Obtain peer-to-peer capital backed by your on-chain reputation and verified identity.</p>
                                 </button>
                             </div>
@@ -213,21 +234,21 @@ const Onboarding = () => {
 
                     {/* IDENTITY */}
                     {currentStep === 3 && (
-                        <motion.div key="s3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-md mx-auto">
-                            <h2 className="text-4xl font-black text-white mb-2 text-center">Identity Anchor</h2>
-                            <p className="text-slate-500 font-medium text-center mb-10">We use decentralized verification to issuance your Soulbound ID.</p>
-                            <form onSubmit={handleAadhaarSubmit} className="space-y-8">
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] block mb-4 text-center">12-Digit Unified Identifier</label>
+                        <motion.div key="s3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-md mx-auto w-full">
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 text-center tracking-tighter italic">Identity Anchor</h2>
+                            <p className="text-sm md:text-base text-slate-500 font-medium text-center mb-10 md:mb-12">We use decentralized verification to issuance your Soulbound ID.</p>
+                            <form onSubmit={handleAadhaarSubmit} className="space-y-6 md:space-y-8">
+                                <div className="premium-card !p-8 md:!p-10">
+                                    <label className="text-[9px] md:text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] block mb-6 md:mb-8 text-center">12-Digit Unified Identifier</label>
                                     <input
                                         type="text" maxLength={12} value={aadhaar}
                                         onChange={(e) => setAadhaar(e.target.value.replace(/\D/g, ''))}
                                         placeholder="0000 0000 0000"
-                                        className="w-full bg-slate-950 border border-slate-900 focus:border-blue-600 rounded-2xl py-6 text-2xl font-mono tracking-[0.4em] text-white text-center outline-none transition-all"
+                                        className="w-full bg-slate-950 border border-slate-800 focus:border-blue-600 rounded-2xl py-5 md:py-6 text-xl md:text-2xl font-mono tracking-[0.4em] text-white text-center outline-none transition-all shadow-inner"
                                         required
                                     />
                                 </div>
-                                <button type="submit" disabled={loading} className="btn-primary w-full py-5 text-xs font-black uppercase tracking-[0.2em]">
+                                <button type="submit" disabled={loading} className="btn-primary w-full !py-5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em]">
                                     {loading ? <FiLoader className="animate-spin inline" /> : <>Continue to Biometrics <FiArrowRight className="inline ml-2" /></>}
                                 </button>
                             </form>
@@ -237,55 +258,58 @@ const Onboarding = () => {
                     {/* LIVELINESS */}
                     {currentStep === 4 && (
                         <motion.div key="s4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center">
-                            <h2 className="text-4xl font-black text-white mb-2">Biometric Liveliness</h2>
-                            <p className="text-slate-500 font-medium mb-12">Confirm your presence to anchor your identity on-chain.</p>
-                            <div className="relative w-72 h-72 mx-auto rounded-[3rem] overflow-hidden border-4 border-slate-900 bg-slate-950 mb-12">
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter italic">Biometric Liveliness</h2>
+                            <p className="text-sm md:text-base text-slate-500 font-medium mb-10 md:mb-12">Confirm your presence to anchor your identity on-chain.</p>
+                            <div className="relative w-64 h-64 md:w-72 md:h-72 mx-auto rounded-[3.5rem] overflow-hidden border-4 border-slate-900 bg-slate-950 mb-10 md:mb-12 shadow-2xl">
                                 <Webcam audio={false} ref={webcamRef} screenshotFormat="image/jpeg" className="w-full h-full object-cover grayscale brightness-110" />
                                 {loading && (
                                     <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-8">
                                         <FiLoader className="text-blue-600 animate-spin mb-4" size={40} />
-                                        <p className="text-white font-black text-xl uppercase tracking-tighter animate-pulse">{blinkInstruction ? 'Blink Twice' : 'Processing...'}</p>
+                                        <p className="text-white font-black text-xl md:text-2xl uppercase tracking-tighter animate-pulse">{blinkInstruction ? 'Blink Twice' : 'Processing...'}</p>
                                     </div>
                                 )}
                             </div>
                             {!loading && (
-                                <button onClick={performLiveliness} className="btn-primary px-12 py-5 text-xs font-black uppercase tracking-[0.2em]">Start Biometric Scan</button>
+                                <button onClick={performLiveliness} className="btn-primary !px-12 !py-5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-xl">Start Biometric Scan</button>
                             )}
                         </motion.div>
                     )}
 
                     {/* WALLET */}
                     {currentStep === 5 && (
-                        <motion.div key="s5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center">
-                            <h2 className="text-4xl font-black text-white mb-2">Protocol Link</h2>
-                            <p className="text-slate-500 font-medium mb-12">Anchor your verified identity to a Web3 wallet.</p>
-                            <div className="p-16 border-2 border-dashed border-slate-900 rounded-[3rem] bg-slate-950/50 mb-8 flex flex-col items-center group transition-all">
-                                <div className="w-20 h-20 bg-blue-600/10 text-blue-600 rounded-3xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform"><FiPocket size={40} /></div>
-                                <ConnectButton />
+                        <motion.div key="s5" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center max-w-md mx-auto w-full">
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter italic">Protocol Link</h2>
+                            <p className="text-sm md:text-base text-slate-500 font-medium mb-10 md:mb-12">Anchor your verified identity to a Web3 wallet.</p>
+                            <div className="premium-card !p-12 md:!p-16 border-2 border-dashed border-slate-800 bg-slate-950/50 mb-8 flex flex-col items-center group transition-all">
+                                <div className="w-16 h-16 md:w-20 md:h-20 bg-blue-600/10 text-blue-600 rounded-3xl flex items-center justify-center mb-8 md:mb-10 group-hover:scale-110 transition-transform"><FiPocket size={40} /></div>
+                                <div className="w-full overflow-hidden flex justify-center">
+                                    <ConnectButton />
+                                </div>
                             </div>
                         </motion.div>
                     )}
 
                     {/* MINT */}
                     {currentStep === 6 && (
-                        <motion.div key="s6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center">
-                            <h2 className="text-4xl font-black text-white mb-2">Issue Soulbound ID</h2>
-                            <p className="text-slate-500 font-medium mb-12">Minting your immutable protocol identifier on Sepolia.</p>
-                            <div className="relative group max-w-xs mx-auto mb-12">
+                        <motion.div key="s6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center max-w-md mx-auto w-full">
+                            <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter italic">Issue Soulbound ID</h2>
+                            <p className="text-sm md:text-base text-slate-500 font-medium mb-10 md:mb-12">Minting your immutable protocol identifier on Sepolia.</p>
+
+                            <div className="relative group mx-auto mb-10 md:mb-12 w-full max-w-[280px] md:max-w-xs">
                                 <div className="absolute inset-0 bg-blue-600/10 blur-3xl pointer-events-none"></div>
-                                <div className="relative bg-slate-950 border-2 border-blue-600/30 p-12 rounded-[3.5rem] aspect-square flex flex-col items-center justify-center shadow-2xl">
-                                    <FiShield size={90} className="text-blue-600 mb-6 drop-shadow-[0_0_15px_rgba(37,99,235,0.4)]" />
-                                    <h4 className="font-black text-2xl text-white italic">AAMBA ID</h4>
-                                    <p className="text-[9px] text-slate-600 font-mono mt-4 truncate w-full">{address}</p>
+                                <div className="relative bg-slate-950 border-2 border-blue-600/30 p-8 md:p-12 rounded-[4rem] aspect-square flex flex-col items-center justify-center shadow-2xl">
+                                    <FiShield size={80} className="md:w-24 md:h-24 text-blue-600 mb-6 drop-shadow-md" />
+                                    <h4 className="font-black text-xl md:text-2xl text-white italic tracking-tighter">AAMBA ID</h4>
+                                    <p className="text-[8px] md:text-[9px] text-slate-600 font-mono mt-4 truncate w-full">{address}</p>
                                     {txnHash && (
                                         <div className="mt-8 p-4 bg-slate-900 rounded-2xl border border-slate-800 w-full text-left">
-                                            <p className="text-[9px] text-blue-500 font-black uppercase tracking-widest mb-1">Broadcasting</p>
-                                            <a href={`https://sepolia.etherscan.io/tx/${txnHash}`} target="_blank" rel="noreferrer" className="text-[9px] text-white font-mono flex items-center gap-2 hover:text-blue-500 transition-colors">Explorer <FiExternalLink size={10} /></a>
+                                            <p className="text-[8px] md:text-[9px] text-blue-500 font-black uppercase tracking-widest mb-1">Broadcasting</p>
+                                            <a href={`https://sepolia.etherscan.io/tx/${txnHash}`} target="_blank" rel="noreferrer" className="text-[8px] md:text-[9px] text-white font-mono flex items-center gap-2 hover:text-blue-500 transition-colors">Explorer <FiExternalLink size={10} /></a>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <button onClick={handleMintNft} disabled={loading} className="btn-primary w-full max-w-sm py-5 text-xs font-black uppercase tracking-[0.2em]">
+                            <button onClick={handleMintNft} disabled={loading} className="btn-primary w-full max-w-sm !py-5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-xl">
                                 {loading ? <FiLoader className="animate-spin inline" /> : 'Claim Soulbound Identity'}
                             </button>
                         </motion.div>
@@ -293,11 +317,11 @@ const Onboarding = () => {
 
                     {/* SUCCESS */}
                     {currentStep === 7 && (
-                        <motion.div key="s7" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-10">
-                            <div className="w-24 h-24 bg-blue-600/10 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-10 shadow-[0_0_40px_rgba(37,99,235,0.1)]"><FiCheckCircle size={52} /></div>
-                            <h2 className="text-5xl font-black text-white mb-4 tracking-tighter">Authorization Complete.</h2>
-                            <p className="text-slate-500 max-w-md mx-auto mb-12 font-medium">Your decentralized identity is now recognized by the Aamba protocol.</p>
-                            <button onClick={() => navigate('/dashboard')} className="w-full bg-white text-black font-black py-6 rounded-2xl hover:bg-slate-200 transition-all shadow-xl flex items-center justify-center gap-4 text-lg uppercase tracking-widest">Enter Protocol Terminal <FiArrowRight size={24} /></button>
+                        <motion.div key="s7" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-6 md:py-10">
+                            <div className="w-20 h-20 md:w-24 md:h-24 bg-blue-600/10 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-8 md:mb-10 shadow-lg shadow-blue-600/10"><FiCheckCircle size={40} className="md:w-12 md:h-12" /></div>
+                            <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter italic">Authorization Complete.</h2>
+                            <p className="text-sm md:text-base text-slate-500 max-w-md mx-auto mb-10 md:mb-12 font-medium">Your decentralized identity is now recognized by the Aamba protocol.</p>
+                            <button onClick={() => navigate('/dashboard')} className="w-full bg-white text-black font-black py-5 md:py-6 rounded-2xl hover:bg-slate-200 transition-all shadow-xl flex items-center justify-center gap-4 text-base md:text-lg uppercase tracking-widest">Enter Protocol Terminal <FiArrowRight size={24} /></button>
                         </motion.div>
                     )}
                 </AnimatePresence>
