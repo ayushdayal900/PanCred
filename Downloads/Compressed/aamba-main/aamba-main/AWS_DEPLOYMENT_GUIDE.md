@@ -111,5 +111,5 @@ I have updated `.github/workflows/deploy.yml` to automatically deploy updates to
 
 **To make this work, add the following secrets to your GitHub Repository (Settings -> Secrets and variables -> Actions -> New repository secret):**
 - `EC2_HOST`: The Public IP of your EC2 instance.
-- `EC2_USERNAME`: `ubuntu`
+- `EC2_USERNAME`: `ec2-user`
 - `EC2_SSH_KEY`: The entire content of your `aamba-key.pem` file.
