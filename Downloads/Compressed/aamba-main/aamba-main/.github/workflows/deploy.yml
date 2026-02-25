@@ -3,7 +3,7 @@ name: Deploy Backend to EC2
 on:
   push:
     branches:
-      - branch-deployment
+      - main
     paths:
       - 'backend/**'
 
