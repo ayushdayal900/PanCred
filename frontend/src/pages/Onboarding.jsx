@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, api } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers';
 import Webcam from 'react-webcam';
@@ -16,34 +16,12 @@ import {
     FiAlertCircle,
     FiLoader
 } from 'react-icons/fi';
-import axios from 'axios';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useConfig } from 'wagmi';
 import { getConnectorClient } from '@wagmi/core';
+import { mintIdentity, checkIdentityOwnership } from '../blockchainService';
 
-// Contract Constants 
-const IDENTITY_CONTRACT_ADDRESS = "0x77cF3b859BD62d7BB936b336358C0aaF4EFA017C";
-const AMOY_CHAIN_ID = "0x13882"; // 80002
-
-const IDENTITY_ABI = [
-    "function mintIdentity(address user) external",
-    "function balanceOf(address owner) view returns (uint256)"
-];
-
-// Helper to convert wagmi client to ethers signer
-async function clientToSigner(config, chainId) {
-    const client = await getConnectorClient(config, { chainId });
-    if (!client) return null;
-    const { account, chain, transport } = client;
-    const network = {
-        chainId: chain.id,
-        name: chain.name,
-        ensAddress: chain.contracts?.ensRegistry?.address,
-    };
-    const provider = new ethers.BrowserProvider(transport, network);
-    const signer = new ethers.JsonRpcSigner(provider, account.address);
-    return signer;
-}
+// Contract Constants are now managed in blockchainService.js and addresses.json
 
 const Onboarding = () => {
     const { userProfile, updateRole, submitKyc } = useAuth();
@@ -135,12 +113,14 @@ const Onboarding = () => {
         setError('');
         setLoading(true);
         try {
-            const response = await axios.post('http://localhost:5000/api/users/verify-kyc', { aadhaarNumber: aadhaar });
+            const response = await api.post('/users/verify-kyc', { aadhaarNumber: aadhaar });
             if (response.data.verified) {
                 setCurrentStep(4);
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Verification failed.');
+            console.error('[KYC] Aadhaar verification failed:', err);
+            const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Verification failed.';
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -179,51 +159,39 @@ const Onboarding = () => {
         setError('');
         setLoading(true);
         try {
-            if (!isConnected || !address) {
-                throw new Error("Wallet not connected");
+            // 0. Get Signer via Wagmi
+            const client = await getConnectorClient(config, { chainId });
+            const provider = new ethers.BrowserProvider(client.transport);
+            const signer = new ethers.JsonRpcSigner(provider, client.account.address);
+
+            // 1. Execute Mint via Frontend Signer
+            const { receipt, txHash } = await mintIdentity(signer, (hash) => setTxnHash(hash));
+
+            // 2. Final verification of ownership
+            const isOwner = await checkIdentityOwnership(address);
+            if (!isOwner) {
+                throw new Error("Identity verification failed. Please check your transaction on Etherscan.");
             }
 
-            const signer = await clientToSigner(config, chainId);
-            if (!signer) throw new Error("Failed to get signer");
-
-            const contract = new ethers.Contract(IDENTITY_CONTRACT_ADDRESS, IDENTITY_ABI, signer);
-
-            // Check if already owns
-            const balance = await contract.balanceOf(address);
-            let finalTxHash = '';
-            if (balance > 0n) {
-                finalTxHash = 'ALREADY_OWNED';
-            } else {
-                const tx = await contract.mintIdentity(address);
-                setTxnHash(tx.hash);
-                await tx.wait();
-                finalTxHash = tx.hash;
-            }
-
-            // SUCCESS! Set flags FIRST to ensure App.jsx catches them on rerender
-            console.log("[Onboarding] Success! Setting localStorage flags...", {
-                walletAddress: address,
-                userRole: role || userProfile?.role
-            });
+            // SUCCESS! Set flags
+            console.log("[Onboarding] Identity Verified on Sepolia. Finalizing...");
             localStorage.setItem("isOnboarded", "true");
             localStorage.setItem("walletAddress", address);
             localStorage.setItem("userRole", role || userProfile?.role);
 
-            // Update backend status
-            await submitKyc('Aadhaar', aadhaar, kycImage, address, finalTxHash);
+            // Update backend (KYC completion)
+            await submitKyc('Aadhaar', aadhaar, kycImage, address, txHash);
 
             setNftMinted(true);
             setCurrentStep(7);
 
-            // Proactive navigate after a short delay for the user to see success
-            console.log("[Onboarding] Triggering final redirect to dashboard...");
             setTimeout(() => {
                 navigate('/dashboard');
             }, 3000);
 
         } catch (err) {
             console.error(err);
-            setError('Minting failed: ' + (err.reason || err.message));
+            setError(err.reason || err.message || 'Minting failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -451,9 +419,17 @@ const Onboarding = () => {
                                     <h4 className="font-black text-2xl text-white">Aamba ID</h4>
                                     <p className="text-[10px] text-slate-500 font-mono mt-3 truncate w-full">{address}</p>
                                     {txnHash && (
-                                        <div className="mt-6 p-3 bg-fintech-accent/10 rounded-xl border border-fintech-accent/20 w-full overflow-hidden">
-                                            <p className="text-[9px] text-fintech-accent uppercase font-black text-left mb-1 tracking-widest">Transaction Hash</p>
-                                            <p className="text-[9px] text-slate-400 font-mono break-all">{txnHash}</p>
+                                        <div className="mt-6 p-4 bg-fintech-accent/5 rounded-2xl border border-fintech-accent/20 w-full">
+                                            <p className="text-[10px] text-fintech-accent uppercase font-black text-left mb-2 tracking-widest">Transaction Sent</p>
+                                            <p className="text-[9px] text-slate-500 font-mono break-all mb-3 text-left">{txnHash}</p>
+                                            <a
+                                                href={`https://sepolia.etherscan.io/tx/${txnHash}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-[10px] text-white font-bold flex items-center gap-2 hover:text-fintech-accent transition-colors"
+                                            >
+                                                View on Etherscan <FiExternalLink size={10} />
+                                            </a>
                                         </div>
                                     )}
                                 </div>

@@ -27,13 +27,12 @@ contract SoulboundIdentity is ERC721, Ownable {
     }
 
     /**
-     * @dev Mints a new Identity NFT to the specified user.
+     * @dev Mints a new Identity NFT to the caller.
      * Requirements:
-     * - Only the contract owner can call this.
      * - The user must not already own an identity NFT.
-     * @param user The address that will receive the Soulbound Identity.
      */
-    function mintIdentity(address user) public onlyOwner {
+    function mintIdentity() public {
+        address user = msg.sender;
         // Enforce "one identity per wallet" rule
         if (balanceOf(user) > 0) {
             revert Soulbound_AlreadyHasIdentity();

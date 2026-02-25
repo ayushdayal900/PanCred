@@ -166,6 +166,7 @@ exports.updateUserRole = async (req, res) => {
 exports.verifyKyc = async (req, res) => {
     try {
         const { aadhaarNumber } = req.body;
+        console.log(`[KYC] Verification request for Aadhaar: ${aadhaarNumber} from User ${req.user?._id}`);
 
         // Basic validation: 12-digit numeric
         if (!/^\d{12}$/.test(aadhaarNumber)) {

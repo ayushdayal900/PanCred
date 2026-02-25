@@ -4,6 +4,10 @@ import { useDisconnect } from 'wagmi';
 
 const AuthContext = createContext();
 
+export const api = axios.create({
+    baseURL: 'http://localhost:5000/api'
+});
+
 export const AuthProvider = ({ children }) => {
     const [userProfile, setUserProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -14,7 +18,7 @@ export const AuthProvider = ({ children }) => {
         if (userInfo) {
             const parsedInfo = JSON.parse(userInfo);
             setUserProfile(parsedInfo);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${parsedInfo.token}`;
+            api.defaults.headers.common['Authorization'] = `Bearer ${parsedInfo.token}`;
         }
         setLoading(false);
     }, []);
@@ -22,12 +26,12 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             setLoading(true);
-            const response = await axios.post('http://localhost:5000/api/users/login', { email, password });
+            const response = await api.post('/users/login', { email, password });
             if (response.data.success) {
                 const data = response.data.data;
                 setUserProfile(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
-                axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+                api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
                 return { success: true };
             }
         } catch (error) {
@@ -41,12 +45,12 @@ export const AuthProvider = ({ children }) => {
     const walletLogin = async (walletAddress) => {
         try {
             setLoading(true);
-            const response = await axios.post('http://localhost:5000/api/users/wallet-login', { walletAddress });
+            const response = await api.post('/users/wallet-login', { walletAddress });
             if (response.data.success) {
                 const data = response.data.data;
                 setUserProfile(data);
                 localStorage.setItem('userInfo', JSON.stringify(data));
-                axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+                api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
                 return { success: true };
             }
         } catch (error) {
@@ -89,7 +93,7 @@ export const AuthProvider = ({ children }) => {
     const updateRole = async (role) => {
         if (!userProfile) return;
         try {
-            const response = await axios.put(`http://localhost:5000/api/users/role`, { role });
+            const response = await api.put(`/users/role`, { role });
             if (response.data.success) {
                 const data = response.data.data;
                 setUserProfile(data);
@@ -103,7 +107,7 @@ export const AuthProvider = ({ children }) => {
     const submitKyc = async (documentType, documentNumber, image, walletAddress = null, txHash = null) => {
         if (!userProfile) return;
         try {
-            const response = await axios.post(`http://localhost:5000/api/users/kyc`, {
+            const response = await api.post(`/users/kyc`, {
                 documentType,
                 documentNumber,
                 image,

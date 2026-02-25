@@ -39,7 +39,7 @@ const LandingPage = () => {
                 >
                     <div className="inline-flex items-center space-x-2 bg-fintech-accent/10 text-fintech-accent px-4 py-2 rounded-full text-sm font-semibold tracking-wide mb-8 border border-fintech-accent/20">
                         <span className="w-2 h-2 rounded-full bg-fintech-accent animate-pulse"></span>
-                        <span>v1.0 Live on Polygon Amoy</span>
+                        <span>v1.0 Live on Ethereum Sepolia</span>
                     </div>
                     <h1 className="text-6xl md:text-7xl font-black text-white mb-6 tracking-tighter leading-tight">
                         Empowering Financial Inclusion <br />

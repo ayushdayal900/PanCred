@@ -10,7 +10,7 @@ import {
   darkTheme
 } from '@rainbow-me/rainbowkit';
 import { WagmiProvider } from 'wagmi';
-import { mainnet, polygon, optimism, arbitrum, base, polygonAmoy } from 'wagmi/chains';
+import { mainnet, sepolia, polygon, optimism, arbitrum, base } from 'wagmi/chains';
 
 import {
   QueryClientProvider,
@@ -29,7 +29,7 @@ import { metaMaskWallet, walletConnectWallet } from '@rainbow-me/rainbowkit/wall
 const config = getDefaultConfig({
   appName: 'MicroFin',
   projectId: '452cd38a8eefe3df3531bcf91c4d930c', // Valid public WalletConnect ID for testing
-  chains: [mainnet, polygon, optimism, arbitrum, base, polygonAmoy],
+  chains: [sepolia, mainnet, polygon, optimism, arbitrum, base],
 
   wallets: [
     {

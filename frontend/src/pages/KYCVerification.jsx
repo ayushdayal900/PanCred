@@ -111,8 +111,8 @@ const KYCVerification = () => {
     };
 
     const handleMintNFT = async () => {
-        if (chainId !== 80002) {
-            alert("Please switch to Polygon Amoy Testnet!");
+        if (chainId !== 11155111) {
+            alert("Please switch to Ethereum Sepolia Testnet!");
             return;
         }
 
@@ -294,7 +294,7 @@ const KYCVerification = () => {
                             {minting ? (
                                 <>
                                     <div className="w-5 h-5 border-2 border-t-white border-white/20 rounded-full animate-spin mr-3"></div>
-                                    Minting on Amoy...
+                                    Minting on Sepolia...
                                 </>
                             ) : 'Mint Identity NFT'}
                         </button>

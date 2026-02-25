@@ -13,11 +13,10 @@ import {
     FiExternalLink
 } from 'react-icons/fi';
 import { useAccount, useConfig } from 'wagmi';
-import { getPublicClient } from '@wagmi/core';
+import { checkIdentityOwnership } from '../blockchainService';
+import addresses from '../contracts/addresses.json';
 
-// Contract Constants 
-const IDENTITY_CONTRACT_ADDRESS = "0x77cF3b859BD62d7BB936b336358C0aaF4EFA017C";
-const IDENTITY_ABI = ["function balanceOf(address owner) view returns (uint256)"];
+const IDENTITY_CONTRACT_ADDRESS = addresses.identity;
 
 const Profile = () => {
     const { userProfile } = useAuth();
@@ -34,14 +33,8 @@ const Profile = () => {
         const checkNft = async () => {
             if (walletAddr) {
                 try {
-                    const publicClient = getPublicClient(config);
-                    const balance = await publicClient.readContract({
-                        address: IDENTITY_CONTRACT_ADDRESS,
-                        abi: IDENTITY_ABI,
-                        functionName: 'balanceOf',
-                        args: [walletAddr],
-                    });
-                    setHasNft(Number(balance) > 0);
+                    const owned = await checkIdentityOwnership(walletAddr);
+                    setHasNft(owned);
                 } catch (err) {
                     console.error("NFT Check error:", err);
                 } finally {
@@ -52,7 +45,7 @@ const Profile = () => {
             }
         };
         checkNft();
-    }, [walletAddr, config]);
+    }, [walletAddr]);
 
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text);
@@ -183,7 +176,7 @@ const Profile = () => {
                                     <div className="flex justify-center"><FiActivity className="animate-spin text-fintech-accent" /></div>
                                 ) : (
                                     <StatusBadge
-                                        status={hasNft ? "Verified on Polygon" : "Not Minted"}
+                                        status={hasNft ? "Verified on Ethereum" : "Not Minted"}
                                         type={hasNft ? "on-chain" : "pending"}
                                     />
                                 )}
@@ -191,7 +184,7 @@ const Profile = () => {
                                 {hasNft && (
                                     <div className="mt-6 flex justify-center">
                                         <a
-                                            href={`https://amoy.polygonscan.com/address/${IDENTITY_CONTRACT_ADDRESS}`}
+                                            href={`https://sepolia.etherscan.io/address/${IDENTITY_CONTRACT_ADDRESS}`}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="text-xs text-fintech-accent flex items-center gap-2 hover:underline"

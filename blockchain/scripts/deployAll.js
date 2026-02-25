@@ -6,11 +6,11 @@ async function main() {
     const [deployer] = await hre.ethers.getSigners();
 
     console.log("====================================================");
-    console.log("🚀 Starting Deployment to Polygon Amoy Testnet");
+    console.log(`🚀 Starting Deployment to ${hre.network.name}`);
     console.log("Deploying with account:", deployer.address);
 
     const balance = await hre.ethers.provider.getBalance(deployer.address);
-    console.log("Account balance:", hre.ethers.formatEther(balance), "POL");
+    console.log("Account balance:", hre.ethers.formatEther(balance));
     console.log("====================================================");
 
     // 1. Deploy SoulboundIdentity
