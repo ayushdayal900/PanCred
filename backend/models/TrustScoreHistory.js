@@ -11,13 +11,25 @@ const trustScoreHistorySchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    previousScore: {
+        type: Number,
+        default: 0,
+    },
     newScore: {
         type: Number,
         required: true,
     },
     reason: {
         type: String,
-        enum: ['On-time Repayment', 'Early Repayment', 'Late Repayment', 'Defaulted', 'Successful Funding', 'Manual Adjustment'],
+        enum: [
+            // Legacy values
+            'On-time Repayment', 'Early Repayment', 'Late Repayment',
+            'Defaulted', 'Successful Funding', 'Manual Adjustment',
+            // Active values used by the app
+            'NFT Minted',
+            'Funded a Loan',
+            'Successful Repayment',
+        ],
         required: true,
     },
     associatedLoan: {

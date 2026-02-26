@@ -16,11 +16,13 @@ const getTrustScoreHistory = async (req, res) => {
             .lean();
 
         // Also fetch current score
-        const user = await User.findById(userId).select('trustScore');
+        const user = await User.findById(userId).select('trustScore name role');
 
         res.status(200).json({
             success: true,
             currentScore: user.trustScore,
+            name: user.name,
+            role: user.role,
             history
         });
     } catch (error) {

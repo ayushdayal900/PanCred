@@ -5,15 +5,21 @@ import { ethers } from 'ethers';
 import { useAccount, useConfig, useWalletClient } from 'wagmi';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FiLoader, FiCheckCircle, FiInfo, FiActivity, FiShield, FiPlus } from 'react-icons/fi';
+import { FiLoader, FiCheckCircle, FiInfo, FiActivity, FiShield, FiPlus, FiCalendar, FiTrendingUp, FiAlertCircle } from 'react-icons/fi';
+
 
 import addresses from '../contracts/addresses.json';
 import _microfinanceJson from '../contracts/Microfinance.json';
 // Support both { abi: [...] } wrapped format and raw array format
 const microfinanceAbi = Array.isArray(_microfinanceJson) ? _microfinanceJson : _microfinanceJson.abi;
+import _factoryJson from '../contracts/LoanAgreementFactory.json';
+import _agreementJson from '../contracts/LoanAgreement.json';
+const factoryAbi = Array.isArray(_factoryJson) ? _factoryJson : _factoryJson.abi;
+const agreementAbi = Array.isArray(_agreementJson) ? _agreementJson : _agreementJson.abi;
 import { mintIdentity, checkIdentityOwnership, parseBlockchainError } from '../blockchainService';
 import LoanTimeline from '../components/LoanTimeline';
 import TransactionAccordion from '../components/TransactionAccordion';
+
 
 const BorrowerDashboard = () => {
     const { userProfile, token } = useAuth();
@@ -33,6 +39,12 @@ const BorrowerDashboard = () => {
     const [hasIdentity, setHasIdentity] = useState(false);
     const [identityChecking, setIdentityChecking] = useState(true);
     const [contractLinkInfo, setContractLinkInfo] = useState({ identity: 'Checking...', trust: 'Checking...' });
+
+    // Factory agreements
+    const [agreements, setAgreements] = useState([]);
+    const [agreementsLoading, setAgreementsLoading] = useState(false);
+    const [payingInstallment, setPayingInstallment] = useState(null);
+
 
     const checkContractSync = async () => {
         try {
@@ -106,6 +118,79 @@ const BorrowerDashboard = () => {
             contract.off("LoanRepaid", handleUpdate);
         };
     }, [walletAddress]);
+
+    // ──────────────────────────────────────────────────────
+    // Fetch LoanAgreementFactory agreements for this borrower
+    // ──────────────────────────────────────────────────────
+    const fetchAgreements = async () => {
+        if (!walletAddress || !addresses.loanFactory) return;
+        setAgreementsLoading(true);
+        try {
+            const provider = walletClient
+                ? new ethers.BrowserProvider(walletClient.transport)
+                : new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com');
+
+            const factory = new ethers.Contract(addresses.loanFactory, factoryAbi, provider);
+            const addrs = await factory.getBorrowerAgreements(walletAddress);
+            console.log('[BorrowerDashboard] factory agreements:', addrs.length);
+
+            const details = await Promise.all(addrs.map(async (addr) => {
+                try {
+                    const agr = new ethers.Contract(addr, agreementAbi, provider);
+                    const status = await agr.getStatus();
+                    return {
+                        address: addr,
+                        paymentsMade: Number(status._paymentsMade),
+                        totalDuration: Number(status._totalDuration),
+                        nextDueTimestamp: Number(status._nextDueTimestamp),
+                        monthlyPayment: ethers.formatEther(status._monthlyPayment),
+                        remainingPayments: Number(status._remainingPayments),
+                        completed: status._completed,
+                        isDue: Date.now() / 1000 >= Number(status._nextDueTimestamp),
+                    };
+                } catch (e) {
+                    console.error('[BorrowerDashboard] Failed to read agreement:', addr, e);
+                    return null;
+                }
+            }));
+
+            setAgreements(details.filter(Boolean));
+        } catch (err) {
+            console.error('[BorrowerDashboard] fetchAgreements error:', err);
+        } finally {
+            setAgreementsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (walletAddress) fetchAgreements();
+    }, [walletAddress, walletClient]);
+
+    const handlePayInstallment = async (agreement) => {
+        if (!isConnected || !walletClient) return toast.error('Connect wallet first');
+        const tid = toast.loading(`Paying installment for ${agreement.address.slice(0, 8)}...`);
+        setPayingInstallment(agreement.address);
+        try {
+            const provider = new ethers.BrowserProvider(walletClient.transport);
+            const signer = await provider.getSigner();
+            const agr = new ethers.Contract(agreement.address, agreementAbi, signer);
+            const valueWei = ethers.parseEther(agreement.monthlyPayment);
+
+            toast.loading('Confirm payment in wallet...', { id: tid });
+            const tx = await agr.payInstallment({ value: valueWei });
+
+            toast.loading('Broadcasting...', { id: tid });
+            await tx.wait();
+
+            toast.success('Installment paid! Lender credited.', { id: tid });
+            fetchAgreements();
+        } catch (err) {
+            toast.error(parseBlockchainError(err), { id: tid });
+        } finally {
+            setPayingInstallment(null);
+        }
+    };
+
 
     const checkUserIdentity = async () => {
         setIdentityChecking(true);
@@ -370,8 +455,8 @@ const BorrowerDashboard = () => {
                                         const isMatch = isAddr && val.toLowerCase() === addresses.identity?.toLowerCase();
                                         return (
                                             <span className={`text-[8px] font-mono italic ${val === 'Checking...' ? 'text-slate-500' :
-                                                    !isAddr ? 'text-red-400' :
-                                                        isMatch ? 'text-emerald-400' : 'text-red-400'
+                                                !isAddr ? 'text-red-400' :
+                                                    isMatch ? 'text-emerald-400' : 'text-red-400'
                                                 }`}>
                                                 {val === 'Checking...' ? '...' :
                                                     isAddr ? `${val.slice(0, 6)}...${val.slice(-4)}` :
@@ -559,8 +644,117 @@ const BorrowerDashboard = () => {
                     </div>
                 </div>
             </section>
+
+            {/* ── Installment Agreements (Factory) ── */}
+            {addresses.loanFactory && (
+                <section className="mt-16 pt-16 border-t border-slate-900">
+                    <div className="flex items-center justify-between mb-10">
+                        <div>
+                            <h2 className="text-2xl md:text-3xl font-black text-white italic tracking-tighter">Installment Agreements</h2>
+                            <p className="text-xs text-slate-500 font-medium mt-1">Active P2P loan contracts — pay monthly installments on-chain.</p>
+                        </div>
+                        {agreementsLoading && <FiLoader className="text-blue-500 animate-spin" />}
+                    </div>
+
+                    {agreements.length === 0 && !agreementsLoading ? (
+                        <div className="premium-card py-16 text-center space-y-4 border-2 border-dashed border-slate-900">
+                            <div className="w-16 h-16 bg-slate-900 rounded-3xl flex items-center justify-center mx-auto text-slate-700">
+                                <FiCalendar size={32} />
+                            </div>
+                            <p className="text-slate-500 font-bold italic">No active factory agreements yet.</p>
+                            <p className="text-slate-600 text-sm">Post a loan request on the Borrow page and wait for a lender to fund it.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {agreements.map(agr => {
+                                const progress = agr.totalDuration > 0 ? (agr.paymentsMade / agr.totalDuration) * 100 : 0;
+                                const nextDue = new Date(agr.nextDueTimestamp * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                                return (
+                                    <div key={agr.address} className={`premium-card !p-8 border-l-4 ${agr.completed ? 'border-l-emerald-500/50' : agr.isDue ? 'border-l-amber-500/50' : 'border-l-blue-500/50'}`}>
+                                        {/* Contract address + status */}
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div>
+                                                <p className="text-[9px] font-mono text-slate-500 font-black uppercase tracking-wider">Agreement</p>
+                                                <p className="text-xs font-mono text-slate-400 mt-1">{agr.address.slice(0, 10)}...{agr.address.slice(-6)}</p>
+                                            </div>
+                                            <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${agr.completed ? 'bg-emerald-500/10 text-emerald-500' : agr.isDue ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
+                                                {agr.completed ? 'Completed' : agr.isDue ? 'Payment Due' : 'Active'}
+                                            </span>
+                                        </div>
+
+                                        {/* Monthly payment */}
+                                        <div className="mb-6">
+                                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Monthly Installment</p>
+                                            <p className="text-3xl font-black text-white italic tracking-tighter">
+                                                {agr.monthlyPayment} <span className="text-slate-500 text-sm font-normal not-italic">ETH</span>
+                                            </p>
+                                        </div>
+
+                                        {/* Stats */}
+                                        <div className="grid grid-cols-3 gap-3 mb-6 bg-slate-950/50 rounded-xl p-3 text-center">
+                                            <div>
+                                                <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Paid</p>
+                                                <p className="text-white font-black italic">{agr.paymentsMade}/{agr.totalDuration}</p>
+                                            </div>
+                                            <div className="border-x border-slate-900">
+                                                <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Left</p>
+                                                <p className="text-blue-400 font-black italic">{agr.remainingPayments}</p>
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <FiCalendar size={9} className="text-slate-500" />
+                                                    <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Due</p>
+                                                </div>
+                                                <p className="text-[9px] text-slate-400 font-bold">{agr.completed ? '—' : nextDue}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Progress bar */}
+                                        <div className="mb-6">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Repayment Progress</p>
+                                                <p className="text-[8px] text-slate-400 font-black">{progress.toFixed(0)}%</p>
+                                            </div>
+                                            <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 rounded-full transition-all duration-500"
+                                                    style={{ width: `${progress}%` }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Pay button */}
+                                        {!agr.completed && (
+                                            <button
+                                                onClick={() => handlePayInstallment(agr)}
+                                                disabled={!agr.isDue || payingInstallment === agr.address}
+                                                className={`w-full btn-primary !py-4 text-[10px] font-black uppercase tracking-widest ${agr.isDue ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-500/10' : 'opacity-50 cursor-not-allowed'}`}
+                                            >
+                                                {payingInstallment === agr.address
+                                                    ? <><FiLoader className="animate-spin inline mr-2" />Paying...</>
+                                                    : agr.isDue
+                                                        ? `Pay ${agr.monthlyPayment} ETH Now`
+                                                        : `Next Due: ${nextDue}`
+                                                }
+                                            </button>
+                                        )}
+
+                                        {agr.completed && (
+                                            <div className="flex items-center justify-center gap-2 py-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
+                                                <FiCheckCircle className="text-emerald-500" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Fully Repaid</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </section>
+            )}
         </div>
     );
 };
 
 export default BorrowerDashboard;
+

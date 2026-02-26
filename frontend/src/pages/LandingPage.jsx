@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiArrowRight, FiShield, FiTrendingUp, FiLayers, FiCheckCircle, FiMenu } from 'react-icons/fi';
+import { FiArrowRight, FiShield, FiTrendingUp, FiLayers, FiCheckCircle } from 'react-icons/fi';
+import { getSBTCount } from '../blockchainService';
 
 const LandingPage = () => {
     const navigate = useNavigate();
+    const [sbtCount, setSbtCount] = useState(null); // null = loading
+
+    useEffect(() => {
+        getSBTCount().then((count) => {
+            setSbtCount(count);
+        });
+    }, []);
 
     const features = [
         {
@@ -106,7 +114,14 @@ const LandingPage = () => {
                     <div className="global-container grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 text-center">
                         {[
                             { val: "$0.00", label: "Protocol TVL" },
-                            { val: "0", label: "SBT Identities" },
+                            {
+                                val: sbtCount === null
+                                    ? <span className="animate-pulse text-slate-600">...</span>
+                                    : sbtCount === 0 || sbtCount
+                                        ? sbtCount
+                                        : "–",
+                                label: "SBT Identities"
+                            },
                             { val: "Ethereum", label: "Source Chain" },
                             { val: "100%", label: "On-Chain Audit" }
                         ].map((s, i) => (

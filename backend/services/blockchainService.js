@@ -47,7 +47,8 @@ async function updateTrustScore(userId, changeAmount, reason, loanId = null, met
         const user = await User.findById(userId);
         if (!user) return;
 
-        let newScore = user.trustScore + changeAmount;
+        const previousScore = user.trustScore;
+        let newScore = previousScore + changeAmount;
         // Cap score between 0 and 1000
         newScore = Math.max(0, Math.min(1000, newScore));
 
@@ -59,13 +60,14 @@ async function updateTrustScore(userId, changeAmount, reason, loanId = null, met
         await TrustScoreHistory.create({
             user: userId,
             changeAmount,
+            previousScore,
             newScore,
             reason,
             associatedLoan: loanId,
             metadata
         });
 
-        console.log(`✅ Trust Score updated locally for User ${userId}: ${reason} -> New Score: ${newScore}`);
+        console.log(`✅ Trust Score updated locally for User ${userId}: ${reason} -> ${previousScore} → ${newScore}`);
         return newScore;
     } catch (error) {
         console.error('Error updating trust score history:', error);

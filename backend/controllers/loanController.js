@@ -1,5 +1,6 @@
 const LoanRequest = require('../models/LoanRequest');
 const User = require('../models/User');
+const { updateTrustScore } = require('../services/blockchainService');
 
 // @desc    Create a new loan request (Borrower action)
 // @route   POST /api/loans
@@ -71,6 +72,22 @@ exports.fundLoan = async (req, res) => {
 
         await loan.save();
 
+        // ── Trust Score: Lender gets +50 for first loan funded, +10 for subsequent ──
+        try {
+            const lenderLoanCount = await LoanRequest.countDocuments({ lender: lenderId, status: { $in: ['Funded', 'Repaid'] } });
+            // lenderLoanCount is now 1+ (current loan is already saved as Funded)
+            const isFirstFund = lenderLoanCount === 1;
+            const scoreChange = isFirstFund ? 50 : 10;
+            const reason = 'Funded a Loan';
+            await updateTrustScore(lenderId, scoreChange, reason, loan._id, {
+                loanId: loan._id.toString(),
+                isFirstFund
+            });
+            console.log(`[TrustScore] Lender ${lenderId} +${scoreChange} (${isFirstFund ? 'first fund bonus' : 'subsequent fund'})`);
+        } catch (tsErr) {
+            console.error('[TrustScore] Lender update failed (non-critical):', tsErr.message);
+        }
+
         // In real life, trigger Ethers.js to move funds from Lender Wallet -> Borrower Wallet
 
         res.status(200).json({
@@ -122,16 +139,40 @@ exports.getUserLoans = async (req, res) => {
 exports.repayLoan = async (req, res) => {
     try {
         const { txHash } = req.body;
-        const loan = await LoanRequest.findById(req.params.id);
+        const loan = await LoanRequest.findById(req.params.id).populate('borrower');
 
         if (!loan) return res.status(404).json({ message: 'Loan not found' });
 
         loan.status = 'Repaid';
-        // In a real app we'd store the txHash in a separate ledger/field
+        loan.repaymentTxHash = txHash || null;
         await loan.save();
+
+        // ── Trust Score: Borrower gets +75 on successful repayment ──
+        if (loan.borrower && loan.borrower._id) {
+            try {
+                const borrowerRepaidCount = await LoanRequest.countDocuments({
+                    borrower: loan.borrower._id,
+                    status: 'Repaid'
+                });
+                // +100 for first repayment (milestone), +75 for subsequent
+                const isFirstRepayment = borrowerRepaidCount === 1;
+                const scoreChange = isFirstRepayment ? 100 : 75;
+                await updateTrustScore(
+                    loan.borrower._id,
+                    scoreChange,
+                    'Successful Repayment',
+                    loan._id,
+                    { txHash, isFirstRepayment, onChainLoanId: loan.simulatedSmartContractId }
+                );
+                console.log(`[TrustScore] Borrower ${loan.borrower._id} +${scoreChange} (${isFirstRepayment ? 'first repayment bonus' : 'subsequent repayment'})`);
+            } catch (tsErr) {
+                console.error('[TrustScore] Borrower update failed (non-critical):', tsErr.message);
+            }
+        }
 
         res.status(200).json({ success: true, message: 'Loan status updated to Repaid' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+

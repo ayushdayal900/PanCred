@@ -5,15 +5,21 @@ import { ethers } from 'ethers';
 import { useAccount, useConfig, useWalletClient } from 'wagmi';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FiLoader, FiTrendingUp, FiCheckCircle, FiInfo, FiSearch, FiGlobe } from 'react-icons/fi';
+import { FiLoader, FiTrendingUp, FiCheckCircle, FiInfo, FiSearch, FiGlobe, FiCalendar, FiDollarSign } from 'react-icons/fi';
+
 
 import addresses from '../contracts/addresses.json';
 import _microfinanceJson from '../contracts/Microfinance.json';
 // Support both { abi: [...] } wrapped format and raw array format
 const microfinanceAbi = Array.isArray(_microfinanceJson) ? _microfinanceJson : _microfinanceJson.abi;
 import trustScoreAbi from '../contracts/TrustScoreRegistry.json';
+import _factoryJson from '../contracts/LoanAgreementFactory.json';
+import _agreementJson from '../contracts/LoanAgreement.json';
+const factoryAbi = Array.isArray(_factoryJson) ? _factoryJson : _factoryJson.abi;
+const agreementAbi = Array.isArray(_agreementJson) ? _agreementJson : _agreementJson.abi;
 import { parseBlockchainError, checkIdentityOwnership } from '../blockchainService';
 import TransactionAccordion from '../components/TransactionAccordion';
+
 
 const LenderDashboard = () => {
     const { userProfile, token } = useAuth();
@@ -27,6 +33,11 @@ const LenderDashboard = () => {
     const [actionLoading, setActionLoading] = useState(null);
     const [onChainLoans, setOnChainLoans] = useState({ created: [], funded: [] });
     const [onChainLoading, setOnChainLoading] = useState(false);
+
+    // Factory lender agreements
+    const [lenderAgreements, setLenderAgreements] = useState([]);
+    const [lenderAgreementsLoading, setLenderAgreementsLoading] = useState(false);
+
 
     useEffect(() => {
         fetchLoans();
@@ -52,6 +63,51 @@ const LenderDashboard = () => {
             contract.off("LoanRepaid", handleUpdate);
         };
     }, [walletAddress]);
+
+    // ─── Fetch factory funded agreements for this lender ───────────────────
+    const fetchLenderAgreements = async () => {
+        if (!walletAddress || !addresses.loanFactory) return;
+        setLenderAgreementsLoading(true);
+        try {
+            const provider = walletClient
+                ? new ethers.BrowserProvider(walletClient.transport)
+                : new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com');
+
+            const factory = new ethers.Contract(addresses.loanFactory, factoryAbi, provider);
+            const addrs = await factory.getLenderAgreements(walletAddress);
+            console.log('[LenderDashboard] factory lender agreements:', addrs.length);
+
+            const details = await Promise.all(addrs.map(async (addr) => {
+                try {
+                    const agr = new ethers.Contract(addr, agreementAbi, provider);
+                    const status = await agr.getStatus();
+                    return {
+                        address: addr,
+                        paymentsMade: Number(status._paymentsMade),
+                        totalDuration: Number(status._totalDuration),
+                        nextDueTimestamp: Number(status._nextDueTimestamp),
+                        monthlyPayment: ethers.formatEther(status._monthlyPayment),
+                        remainingPayments: Number(status._remainingPayments),
+                        completed: status._completed,
+                    };
+                } catch (e) {
+                    console.error('[LenderDashboard] Failed to read agreement:', addr, e);
+                    return null;
+                }
+            }));
+            setLenderAgreements(details.filter(Boolean));
+        } catch (err) {
+            console.error('[LenderDashboard] fetchLenderAgreements error:', err);
+        } finally {
+            setLenderAgreementsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (walletAddress) fetchLenderAgreements();
+    }, [walletAddress, walletClient]);
+
+
 
     const fetchOnChainLoans = async () => {
         if (!walletAddress) return;
@@ -302,80 +358,88 @@ const LenderDashboard = () => {
                 </div>
             )}
 
-            {/* On-Chain Archive Section */}
-            <section className="mt-16 pt-16 border-t border-slate-900">
-                <div className="flex items-center justify-between mb-10">
-                    <div>
-                        <h2 className="text-2xl md:text-3xl font-black text-white italic tracking-tighter">On-Chain Protocol Archive</h2>
-                        <p className="text-xs text-slate-500 font-medium mt-1">Direct cryptographic verification of your protocol interactions.</p>
-                    </div>
-                    {onChainLoading && <FiLoader className="text-blue-500 animate-spin" />}
-                </div>
+            {/* On-Chain Archive intentionally hidden from Lender view —
+                "Created by You" is always empty (lenders never create loans)
+                and "Funded by You" duplicates the Funded Agreements section below. */}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    {/* Created Loans */}
-                    <div className="space-y-6">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 px-2 flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Created by You
-                        </h3>
-                        {onChainLoans.created.length === 0 ? (
-                            <div className="premium-card !p-8 text-center text-slate-600 text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-900">Zero Records</div>
-                        ) : (
-                            onChainLoans.created.map(loan => (
-                                <div key={loan.id} className="premium-card !p-6 flex flex-col gap-4 border-l-2 border-blue-500/30">
-                                    <div className="flex justify-between items-start">
-                                        <span className="text-[9px] font-mono text-slate-500 font-black">#ID-{loan.id}</span>
-                                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${loan.repaid ? 'bg-emerald-500/10 text-emerald-500' : loan.funded ? 'bg-blue-500/10 text-blue-500' : 'bg-slate-800 text-slate-500'}`}>
-                                            {loan.repaid ? 'Settled' : loan.funded ? 'Active' : 'Unfunded'}
+            {/* ── Factory Funded Agreements (Lender view) ── */}
+            {addresses.loanFactory && lenderAgreements.length > 0 && (
+                <section className="mt-16 pt-16 border-t border-slate-900">
+                    <div className="flex items-center justify-between mb-10">
+                        <div>
+                            <h2 className="text-2xl md:text-3xl font-black text-white italic tracking-tighter">Funded Agreements</h2>
+                            <p className="text-xs text-slate-500 font-medium mt-1">P2P loan contracts you've funded — track installment returns.</p>
+                        </div>
+                        {lenderAgreementsLoading && <FiLoader className="text-emerald-500 animate-spin" />}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {lenderAgreements.map(agr => {
+                            const paidSoFar = (agr.paymentsMade * Number(agr.monthlyPayment)).toFixed(6);
+                            const totalExpected = (agr.totalDuration * Number(agr.monthlyPayment)).toFixed(6);
+                            const progress = agr.totalDuration > 0 ? (agr.paymentsMade / agr.totalDuration) * 100 : 0;
+                            return (
+                                <div key={agr.address} className={`premium-card !p-8 border-l-4 ${agr.completed ? 'border-l-emerald-500/50' : 'border-l-blue-500/50'}`}>
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div>
+                                            <p className="text-[9px] font-mono text-slate-500 font-black uppercase tracking-wider">Agreement</p>
+                                            <p className="text-xs font-mono text-slate-400 mt-1">{agr.address.slice(0, 10)}...{agr.address.slice(-6)}</p>
+                                        </div>
+                                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${agr.completed ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                            {agr.completed ? 'Completed' : 'Active'}
                                         </span>
                                     </div>
-                                    <div className="flex justify-between items-end">
-                                        <div>
-                                            <p className="text-2xl font-black text-white italic tracking-tighter">{loan.amount} <span className="text-[10px] not-italic text-slate-600 ml-1">ETH</span></p>
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mt-1">Interest: {loan.interest} ETH</p>
+
+                                    <div className="grid grid-cols-2 gap-4 mb-6">
+                                        <div className="bg-slate-950/50 rounded-xl p-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <FiDollarSign size={11} className="text-emerald-500" />
+                                                <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Received So Far</p>
+                                            </div>
+                                            <p className="text-emerald-400 font-black italic text-lg">{paidSoFar} ETH</p>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Lender</p>
-                                            <p className="text-[8px] font-mono text-slate-400">{loan.lender === ethers.ZeroAddress ? 'OPEN MARKET' : `${loan.lender.slice(0, 6)}...${loan.lender.slice(-4)}`}</p>
+                                        <div className="bg-slate-950/50 rounded-xl p-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <FiTrendingUp size={11} className="text-blue-500" />
+                                                <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Total Expected</p>
+                                            </div>
+                                            <p className="text-white font-black italic text-lg">{totalExpected} ETH</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-3 mb-6 bg-slate-950/50 rounded-xl p-3 text-center">
+                                        <div>
+                                            <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Received</p>
+                                            <p className="text-white font-black">{agr.paymentsMade}/{agr.totalDuration}</p>
+                                        </div>
+                                        <div className="border-x border-slate-900">
+                                            <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Monthly</p>
+                                            <p className="text-emerald-400 font-black text-[11px]">{agr.monthlyPayment} ETH</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Remaining</p>
+                                            <p className="text-blue-400 font-black">{agr.remainingPayments}</p>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Collection Progress</p>
+                                            <p className="text-[8px] text-slate-400 font-black">{progress.toFixed(0)}%</p>
+                                        </div>
+                                        <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-emerald-600 to-blue-500 rounded-full transition-all duration-500"
+                                                style={{ width: `${progress}%` }}
+                                            />
                                         </div>
                                     </div>
                                 </div>
-                            ))
-                        )}
+                            );
+                        })}
                     </div>
-
-                    {/* Funded Loans */}
-                    <div className="space-y-6">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 px-2 flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Funded by You
-                        </h3>
-                        {onChainLoans.funded.length === 0 ? (
-                            <div className="premium-card !p-8 text-center text-slate-600 text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-900">Zero Records</div>
-                        ) : (
-                            onChainLoans.funded.map(loan => (
-                                <div key={loan.id} className="premium-card !p-6 flex flex-col gap-4 border-l-2 border-emerald-500/30">
-                                    <div className="flex justify-between items-start">
-                                        <span className="text-[9px] font-mono text-slate-500 font-black">#ID-{loan.id}</span>
-                                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded ${loan.repaid ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                                            {loan.repaid ? 'Settled' : 'Active'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between items-end">
-                                        <div>
-                                            <p className="text-2xl font-black text-white italic tracking-tighter">{loan.amount} <span className="text-[10px] not-italic text-slate-600 ml-1">ETH</span></p>
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mt-1">ROI: +{loan.interest} ETH</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Borrower</p>
-                                            <p className="text-[8px] font-mono text-slate-400">{loan.borrower.slice(0, 6)}...{loan.borrower.slice(-4)}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            </section>
+                </section>
+            )}
         </div>
     );
 };

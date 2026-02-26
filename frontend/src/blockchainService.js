@@ -8,6 +8,29 @@ const IdentityABI = [
 ];
 
 const IDENTITY_CONTRACT_ADDRESS = addresses.identity;
+const PUBLIC_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
+
+/**
+ * Reads the total number of Soulbound Identity NFTs minted on-chain.
+ * The contract stores _nextTokenId (starts at 1, increments per mint)
+ * at storage slot 7 (after 7 inherited OpenZeppelin ERC721/Ownable slots).
+ * totalMinted = _nextTokenId - 1
+ */
+export const getSBTCount = async () => {
+    try {
+        const provider = new ethers.JsonRpcProvider(PUBLIC_RPC);
+        // Storage slot 7 = _nextTokenId (after OZ ERC721 + Ownable inherited slots)
+        const raw = await provider.getStorage(IDENTITY_CONTRACT_ADDRESS, 7);
+        const nextTokenId = parseInt(raw, 16);
+        // nextTokenId starts at 1, so total minted = nextTokenId - 1
+        const total = nextTokenId > 0 ? nextTokenId - 1 : 0;
+        console.log(`[Blockchain] SBT total minted: ${total} (nextTokenId=${nextTokenId})`);
+        return total;
+    } catch (err) {
+        console.error("[Blockchain] getSBTCount failed:", err);
+        return null;
+    }
+};
 
 export const getBlockchainSigner = async () => {
     if (!window.ethereum) throw new Error("MetaMask not found.");
