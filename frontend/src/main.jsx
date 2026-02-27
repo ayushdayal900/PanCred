@@ -27,12 +27,14 @@ import { aambaWallet } from './wallets/aambaWallet';
 import { injectedWallet, metaMaskWallet, walletConnectWallet } from '@rainbow-me/rainbowkit/wallets';
 
 // ── AWS Amplify (for Face Liveness guest credentials) ──────────────────────
+import '@aws-amplify/ui-react/styles.css';
 import { Amplify } from 'aws-amplify';
 Amplify.configure({
   Auth: {
     Cognito: {
       identityPoolId: import.meta.env.VITE_COGNITO_IDENTITY_POOL_ID,
       allowGuestAccess: true,
+      identityPoolRegion: import.meta.env.VITE_AWS_REGION || 'us-east-1',
     },
   },
 });

@@ -185,4 +185,12 @@
   border-radius: 16px !important;
   overflow: hidden !important;
   border: 1px solid rgba(255,255,255,0.08) !important;
+  /* Make the camera module significantly larger */
+  min-height: 50vh !important;
+}
+
+/* Force the video inside to scale up */
+.liveness-dark-wrapper .amplify-liveness-video {
+  transform: scale(1.3) !important;
+  transform-origin: center center !important;
 }

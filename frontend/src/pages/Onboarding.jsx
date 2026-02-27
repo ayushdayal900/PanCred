@@ -99,6 +99,7 @@ const Onboarding = () => {
     const [livenessSessionId, setLivenessSessionId] = useState(null);
     const [livenessPhase, setLivenessPhase] = useState('idle'); // idle | loading | detecting | done | error
     const [livenessError, setLivenessError] = useState('');
+    const [livenessCredentials, setLivenessCredentials] = useState(null);
 
     // Persist aadhaar to sessionStorage whenever it changes
     useEffect(() => {
@@ -157,13 +158,26 @@ const Onboarding = () => {
         setLivenessError('');
         try {
             const token = JSON.parse(localStorage.getItem('userInfo') || '{}')?.token;
-            const res = await fetch(`${LIVENESS_API}/api/liveness/create-session`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Failed to create session');
-            setLivenessSessionId(data.sessionId);
+            // Create session and fetch credentials in parallel
+            const [sessionRes, credRes] = await Promise.all([
+                fetch(`${LIVENESS_API}/api/liveness/create-session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                }),
+                fetch(`${LIVENESS_API}/api/liveness/credentials`, {
+                    method: 'GET',
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+            ]);
+            const sessionData = await sessionRes.json();
+            if (!sessionRes.ok) throw new Error(sessionData.message || 'Failed to create session');
+
+            if (credRes.ok) {
+                const credData = await credRes.json();
+                setLivenessCredentials(credData.credentials);
+            }
+
+            setLivenessSessionId(sessionData.sessionId);
             setLivenessPhase('detecting');
         } catch (e) {
             setLivenessError(e.message);
@@ -405,7 +419,7 @@ const Onboarding = () => {
 
                             {/* Detecting — AWS component */}
                             {livenessPhase === 'detecting' && livenessSessionId && (
-                                <div className="mx-auto w-full max-w-md liveness-dark-wrapper">
+                                <div className="mx-auto w-full max-w-xl liveness-dark-wrapper">
                                     <FaceLivenessDetector
                                         key={livenessSessionId}
                                         sessionId={livenessSessionId}
@@ -413,6 +427,7 @@ const Onboarding = () => {
                                         onAnalysisComplete={handleLivenessComplete}
                                         onError={handleLivenessError}
                                         displayText={{ hintMoveFaceToOvalText: 'Move face into the oval' }}
+                                        {...(livenessCredentials ? { credentialProvider: async () => livenessCredentials } : {})}
                                     />
                                 </div>
                             )}

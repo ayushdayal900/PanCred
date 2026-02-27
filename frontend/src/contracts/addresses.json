@@ -2,16 +2,13 @@
   "identity": "0xa1B7Ea9275e1c5DF56c45a5871850279B4b65282",
   "microfinance": "0x5a52d9806CdD6A2c00FD059C9f0cfEFeCeE6f5d3",
   "trustScore": "0xD6CBD589DBCD3a557585eeAc8bf4c4b84799266e",
-<<<<<<< master
   "loanFactory": "0x3Dd0d9CaBA56E4E3799Fa5277f01b38B867FbA8B",
   "treasury": "0xdcA6845bC20c19Cfc5074AaC0b940657FDE53B4D",
   "network": "sepolia",
   "chainId": 11155111,
-  "mockUSDT": "0xec78C8BB7d36bCd2e0ecDbdb231fB192fbA392fE"
-=======
+  "mockUSDT": "0xec78C8BB7d36bCd2e0ecDbdb231fB192fbA392fE",
   "network": "sepolia",
   "chainId": 11155111,
   "treasury": "0xdcA6845bC20c19Cfc5074AaC0b940657FDE53B4D",
   "loanFactory": "0xa68987E1FbC859BaA74d3a04c0F1946850D89c77"
->>>>>>> main
 }
