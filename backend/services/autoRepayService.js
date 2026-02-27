@@ -113,17 +113,25 @@ async function processAgreement(loanDoc, agreementAddress) {
     const tag = `[AutoRepay][${agreementAddress.slice(0, 8)}]`;
 
     // 1. Read on-chain status
-    let status, loanStatusEnum;
+    let status, loanStatusEnum, modeEnum;
     try {
         const agr = new ethers.Contract(agreementAddress, agreementAbi, provider);
         status = await agr.getStatus();
         try {
             loanStatusEnum = await agr.getLoanStatus();
+            modeEnum = await agr.getLoanMode(); // 0: ETH, 1: ERC20
         } catch {
             loanStatusEnum = 0; // Legacy fallback
+            modeEnum = 0; // Legacy fallback (ETH)
         }
     } catch (readErr) {
         console.error(JSON.stringify({ event: 'Read Error', agreement: agreementAddress, error: readErr.message }));
+        return;
+    }
+
+    // 2. Skip automation for ETH loans
+    if (modeEnum === 0n || modeEnum === 0) {
+        console.log(JSON.stringify({ event: 'AutopaySkipped', reason: 'ETH loan', loanId: loanDoc._id.toString() }));
         return;
     }
 
@@ -222,6 +230,8 @@ async function processAgreement(loanDoc, agreementAddress) {
         let tx = null;
         let attempts = 0;
         const maxAttempts = 2;
+
+        console.log(JSON.stringify({ event: 'AutopayExecuted', loanId: loanDoc._id.toString() }));
 
         while (attempts < maxAttempts && !receipt) {
             try {

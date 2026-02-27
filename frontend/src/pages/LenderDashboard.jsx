@@ -17,6 +17,8 @@ import _factoryJson from '../contracts/LoanAgreementFactory.json';
 import _agreementJson from '../contracts/LoanAgreement.json';
 const factoryAbi = Array.isArray(_factoryJson) ? _factoryJson : _factoryJson.abi;
 const agreementAbi = Array.isArray(_agreementJson) ? _agreementJson : _agreementJson.abi;
+import _mockUSDTJson from '../contracts/MockUSDT.json';
+const tUSDTAbi = Array.isArray(_mockUSDTJson) ? _mockUSDTJson : _mockUSDTJson.abi;
 import { parseBlockchainError, checkIdentityOwnership } from '../blockchainService';
 import TransactionAccordion from '../components/TransactionAccordion';
 
@@ -37,6 +39,9 @@ const LenderDashboard = () => {
     // Factory lender agreements
     const [lenderAgreements, setLenderAgreements] = useState([]);
     const [lenderAgreementsLoading, setLenderAgreementsLoading] = useState(false);
+
+    const [tUSDTBalance, setTUSDTBalance] = useState("0.00");
+    const [claimingFaucet, setClaimingFaucet] = useState(false);
 
 
     useEffect(() => {
@@ -105,8 +110,45 @@ const LenderDashboard = () => {
         }
     };
 
+    const fetchBalance = async () => {
+        if (!walletAddress || !addresses.mockUSDT) return;
+        try {
+            const provider = walletClient
+                ? new ethers.BrowserProvider(walletClient.transport)
+                : new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com');
+            const contract = new ethers.Contract(addresses.mockUSDT, tUSDTAbi, provider);
+            const bal = await contract.balanceOf(walletAddress);
+            const decimals = await contract.decimals();
+            setTUSDTBalance(Number(ethers.formatUnits(bal, decimals)).toFixed(2));
+        } catch (error) {
+            console.error("[LenderDashboard] Failed to fetch tUSDT balance:", error);
+        }
+    };
+
+    const handleClaimFaucet = async () => {
+        setClaimingFaucet(true);
+        const tid = toast.loading('Claiming testnet tUSDT...');
+        try {
+            const res = await axios.post('http://localhost:5000/api/faucet/claim', {}, {
+                headers: { Authorization: `Bearer ${token || userProfile.token}` }
+            });
+            if (res.data.success) {
+                toast.success('1000 tUSDT credited to your wallet', { id: tid });
+                fetchBalance();
+            }
+        } catch (err) {
+            const errorMsg = err.response?.data?.error || "Faucet claim failed";
+            toast.error(errorMsg, { id: tid });
+        } finally {
+            setClaimingFaucet(false);
+        }
+    };
+
     useEffect(() => {
-        if (walletAddress) fetchLenderAgreements();
+        if (walletAddress) {
+            fetchLenderAgreements();
+            fetchBalance();
+        }
     }, [walletAddress, walletClient]);
 
     // Listen to Agreement Events (Lender View)
@@ -307,13 +349,28 @@ const LenderDashboard = () => {
                     </h1>
                     <p className="text-sm md:text-base text-slate-500 font-medium italic">Deploy capital into verified, peer-to-peer overcollateralized loans.</p>
                 </div>
-                <button
-                    onClick={fetchLoans}
-                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all bg-slate-900/50 hover:bg-slate-800 border border-slate-800 px-5 py-3 rounded-xl shadow-lg active:scale-95"
-                >
-                    <FiSearch className={loading ? 'animate-spin' : ''} />
-                    Sync Protocol
-                </button>
+                <div className="flex flex-col md:flex-row items-end gap-4">
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-1">Available Capital</span>
+                        <div className="flex items-center gap-2">
+                            <span className="bg-emerald-500/10 text-emerald-500 text-xs px-2 py-1 rounded font-black border border-emerald-500/20">{tUSDTBalance} tUSDT</span>
+                            <button
+                                onClick={handleClaimFaucet}
+                                disabled={claimingFaucet}
+                                className="text-[9px] font-black uppercase tracking-widest text-blue-400 hover:text-white transition-all bg-blue-900/30 hover:bg-blue-800 border border-blue-800/50 px-3 py-1.5 rounded-lg active:scale-95 disabled:opacity-50"
+                            >
+                                {claimingFaucet ? 'Claiming...' : 'Claim 1000 tUSDT (Test Faucet)'}
+                            </button>
+                        </div>
+                    </div>
+                    <button
+                        onClick={fetchLoans}
+                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all bg-slate-900/50 hover:bg-slate-800 border border-slate-800 px-5 py-3 rounded-xl shadow-lg active:scale-95"
+                    >
+                        <FiSearch className={loading ? 'animate-spin' : ''} />
+                        Sync Protocol
+                    </button>
+                </div>
             </header>
 
             {loading ? (
@@ -337,7 +394,7 @@ const LenderDashboard = () => {
                                 <div className="flex justify-between items-start mb-8">
                                     <div className="space-y-1">
                                         <p className="text-[9px] md:text-[10px] uppercase font-black tracking-[0.2em] text-slate-600">Capital Required</p>
-                                        <h3 className="text-3xl md:text-4xl font-black text-white tracking-tighter italic">{loan.amountRequested} <span className="text-sm font-normal text-slate-500 not-italic ml-1">ETH</span></h3>
+                                        <h3 className="text-3xl md:text-4xl font-black text-white tracking-tighter italic">{loan.amountRequested} <span className="text-sm font-normal text-slate-500 not-italic ml-1">{addresses.mockUSDT ? 'tUSDT' : 'ETH'}</span></h3>
                                     </div>
                                     <span className="bg-emerald-500/10 text-emerald-500 text-[9px] md:text-[10px] px-3 py-1.5 rounded-lg font-black uppercase tracking-tighter border border-emerald-500/20 shadow-inner">
                                         {loan.interestRate}% APY

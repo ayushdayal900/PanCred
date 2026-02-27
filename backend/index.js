@@ -11,6 +11,7 @@ const app = express();
 const userRoutes = require('./routes/userRoutes');
 const loanRoutes = require('./routes/loanRoutes');
 const authRoutes = require('./routes/authRoutes');
+const faucetRoutes = require('./routes/faucetRoutes');
 const port = process.env.PORT || 5000;
 const { connectProvider, listenToContractEvents } = require('./services/blockchainService');
 const { startAutoRepayScheduler } = require('./services/autoRepayService');
@@ -32,6 +33,7 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // Core API Routes
 app.use('/api/users', userRoutes);
 app.use('/api/loans', loanRoutes);
+app.use('/api/faucet', faucetRoutes);
 app.use('/auth', authRoutes);
 
 // Basic Route for health check

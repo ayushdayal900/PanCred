@@ -18,13 +18,15 @@ contract LoanAgreement is ReentrancyGuard {
     uint256 public constant PENALTY_POINTS     = 50;
 
     enum LoanStatus { Active, Completed, Defaulted }
+    enum LoanMode { ETH, ERC20 }
 
     // ── Immutables ─────────────────────────────────────────────────────────────
+    LoanMode public immutable loanMode;
     address public immutable borrower;
     address public immutable lender;
     address public immutable treasury;
 
-    IERC20               public immutable token;
+    address              public immutable token;
     ITrustScoreRegistry  public immutable trustRegistry;
     address              public immutable automationService;
 
@@ -67,6 +69,8 @@ contract LoanAgreement is ReentrancyGuard {
 
     // ── Constructor ────────────────────────────────────────────────────────────
     constructor(
+        LoanMode _mode,
+        address _token,
         address _borrower,
         address _lender,
         uint256 _principal,
@@ -74,24 +78,30 @@ contract LoanAgreement is ReentrancyGuard {
         uint256 _durationInMonths,
         address _treasury,
         uint256 _insuranceFee,
-        address _token,
         address _automationService,
         address _trustRegistry
     ) payable {
+        if (_mode == LoanMode.ETH) {
+            require(_token == address(0), "ETH mode must have zero token address");
+            require(msg.value == _principal, "Must forward exact principal");
+        } else {
+            require(_token != address(0), "ERC20 mode requires token address");
+            require(msg.value == 0, "ERC20 mode should not receive ETH");
+        }
+
         require(_borrower          != address(0), "Zero borrower");
         require(_lender            != address(0), "Zero lender");
-        require(_token             != address(0), "Zero token");
         require(_treasury          != address(0), "Zero treasury");
         require(_automationService != address(0), "Zero admin");
         require(_trustRegistry     != address(0), "Zero trust registry");
         require(_durationInMonths  > 0,           "Invalid duration");
         require(_totalRepayment    >= _principal, "Repayment < principal");
-        require(msg.value          == _principal, "Must forward exact principal");
 
+        loanMode          = _mode;
         borrower          = _borrower;
         lender            = _lender;
         treasury          = _treasury;
-        token             = IERC20(_token);
+        token             = _token;
         trustRegistry     = ITrustScoreRegistry(_trustRegistry);
         automationService = _automationService;
         principal         = _principal;
@@ -102,9 +112,12 @@ contract LoanAgreement is ReentrancyGuard {
 
         nextDueTimestamp = block.timestamp;
 
-        // Forward ETH principal to borrower
-        (bool ok, ) = payable(_borrower).call{value: msg.value}("");
-        require(ok, "Principal transfer failed");
+        if (loanMode == LoanMode.ETH) {
+            // Forward ETH principal to borrower
+            (bool ok, ) = payable(_borrower).call{value: msg.value}("");
+            require(ok, "Principal transfer failed");
+        }
+        // In ERC20 mode, the Factory handles the transfer directly
     }
 
     // ── Emergency Admin ────────────────────────────────────────────────────────
@@ -124,7 +137,71 @@ contract LoanAgreement is ReentrancyGuard {
     // ── Core Repayment ─────────────────────────────────────────────────────────
 
     function repayInstallment() external nonReentrant {
+        require(loanMode == LoanMode.ERC20, "Autopay not supported for ETH loans");
         require(msg.sender == borrower || msg.sender == automationService || msg.sender == lender, "Not authorized");
+        
+        _checkAndAdvanceState();
+        if (defaulted) return;
+
+        uint256 insuranceCut = insuranceFeePerInstallment;
+        uint256 lenderAmount = monthlyPayment - insuranceCut;
+
+        // ERC20 mode
+        bool transferOk = _tryTransferFrom(borrower, lender, lenderAmount);
+        if (transferOk && insuranceCut > 0) {
+            _tryTransferFrom(borrower, treasury, insuranceCut);
+        }
+
+        _finalizeRepayment(transferOk, lenderAmount, insuranceCut);
+    }
+
+    function repayETH() external payable nonReentrant {
+        require(loanMode == LoanMode.ETH, "Use repayInstallment for ERC20 loans");
+        require(msg.sender == borrower || msg.sender == lender, "Not authorized");
+        
+        _checkAndAdvanceState();
+        if (defaulted) {
+            // Refund accidentally sent ETH if loan defaulted during this call (from overdue)
+            if (msg.value > 0) {
+                (bool refundOk, ) = payable(msg.sender).call{value: msg.value}("");
+                require(refundOk, "Refund failed");
+            }
+            return;
+        }
+
+        require(msg.value >= monthlyPayment, "Insufficient ETH sent");
+
+        uint256 insuranceCut = insuranceFeePerInstallment;
+        uint256 lenderAmount = monthlyPayment - insuranceCut;
+
+        bool transferOk = true;
+        
+        // Transfer ETH to lender
+        (bool lenderOk, ) = payable(lender).call{value: lenderAmount}("");
+        if (!lenderOk) transferOk = false;
+        
+        // Transfer ETH to treasury
+        if (insuranceCut > 0 && transferOk) {
+            (bool treasuryOk, ) = payable(treasury).call{value: insuranceCut}("");
+            if (!treasuryOk) transferOk = false;
+        }
+        
+        // Refund ETH appropriately
+        if (transferOk) {
+            if (msg.value > monthlyPayment) {
+                (bool refundOk, ) = payable(msg.sender).call{value: msg.value - monthlyPayment}("");
+                require(refundOk, "Refund failed");
+            }
+        } else {
+            // Unwind ETH back to sender
+            (bool refundOk, ) = payable(msg.sender).call{value: msg.value}("");
+            require(refundOk, "Refund failed");
+        }
+
+        _finalizeRepayment(transferOk, lenderAmount, insuranceCut);
+    }
+
+    function _checkAndAdvanceState() internal {
         require(!isPaused, "Loan is paused");
         require(!completed, "Loan already completed");
         require(!defaulted, "Loan is defaulted");
@@ -144,18 +221,14 @@ contract LoanAgreement is ReentrancyGuard {
         if (missedPayments > 3) {
             defaulted = true;
             emit LoanDefaulted(borrower, lender, block.timestamp);
-            return;
+            return; // don't advance timestamp if defaulted
         }
 
         // Advance timestamp
         nextDueTimestamp += REPAYMENT_INTERVAL;
+    }
 
-        uint256 insuranceCut = insuranceFeePerInstallment;
-        uint256 lenderAmount = monthlyPayment - insuranceCut;
-
-        // Transfers
-        bool transferOk = _tryTransferFrom(borrower, lender, lenderAmount);
-
+    function _finalizeRepayment(bool transferOk, uint256 lenderAmount, uint256 insuranceCut) internal {
         if (!transferOk) {
             missedPayments++;
             emit InstallmentMissed(borrower, 1, true, block.timestamp);
@@ -170,11 +243,6 @@ contract LoanAgreement is ReentrancyGuard {
             return;
         }
 
-        // Insurance cut
-        if (insuranceCut > 0) {
-            _tryTransferFrom(borrower, treasury, insuranceCut);
-        }
-
         paymentsMade++;
         emit InstallmentPaid(borrower, paymentsMade, monthlyPayment, lenderAmount, insuranceCut, block.timestamp);
 
@@ -185,7 +253,7 @@ contract LoanAgreement is ReentrancyGuard {
     }
 
     function _tryTransferFrom(address from, address to, uint256 amount) internal returns (bool) {
-        try token.transferFrom(from, to, amount) returns (bool ok) {
+        try IERC20(token).transferFrom(from, to, amount) returns (bool ok) {
             return ok;
         } catch {
             return false;
@@ -216,6 +284,10 @@ contract LoanAgreement is ReentrancyGuard {
         return LoanStatus.Active;
     }
 
+    function getLoanMode() external view returns (LoanMode) {
+        return loanMode;
+    }
+
     // ── Legacy Status (Maintains Frontend compatibility) ───────────────────────
 
     function getStatus() external view returns (
@@ -238,7 +310,7 @@ contract LoanAgreement is ReentrancyGuard {
             completed,
             missedPayments,
             !completed && block.timestamp > nextDueTimestamp + GRACE_PERIOD,
-            token.allowance(borrower, address(this))
+            loanMode == LoanMode.ERC20 ? IERC20(token).allowance(borrower, address(this)) : 0
         );
     }
 }

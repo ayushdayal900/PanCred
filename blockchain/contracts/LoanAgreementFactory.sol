@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./LoanAgreement.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title IIdentity
@@ -40,6 +41,7 @@ contract LoanAgreementFactory {
         uint256 durationInMonths;
         bool funded;
         address agreementAddress;
+        LoanAgreement.LoanMode mode;
     }
 
     uint256 public requestCounter;
@@ -56,7 +58,8 @@ contract LoanAgreementFactory {
         address indexed borrower,
         uint256 principal,
         uint256 totalRepayment,
-        uint256 durationInMonths
+        uint256 durationInMonths,
+        LoanAgreement.LoanMode mode
     );
 
     event LoanFunded(
@@ -97,16 +100,34 @@ contract LoanAgreementFactory {
     // --- Core Functions ---
 
     /**
-     * @dev Borrower creates a loan advertisement.
-     * @param principal         How much ETH the borrower wants
-     * @param totalRepayment    Total ETH the borrower will repay (principal + interest)
-     * @param durationInMonths  How many monthly installments
+     * @dev Backward compatibility: creates an ETH loan.
      */
     function createLoanRequest(
         uint256 principal,
         uint256 totalRepayment,
         uint256 durationInMonths
     ) external onlyVerified {
+        _createLoanRequest(principal, totalRepayment, durationInMonths, LoanAgreement.LoanMode.ETH);
+    }
+
+    /**
+     * @dev Creates a loan specifying the mode (ETH or ERC20).
+     */
+    function createLoanRequestWithMode(
+        uint256 principal,
+        uint256 totalRepayment,
+        uint256 durationInMonths,
+        LoanAgreement.LoanMode mode
+    ) external onlyVerified {
+        _createLoanRequest(principal, totalRepayment, durationInMonths, mode);
+    }
+
+    function _createLoanRequest(
+        uint256 principal,
+        uint256 totalRepayment,
+        uint256 durationInMonths,
+        LoanAgreement.LoanMode mode
+    ) internal {
         require(principal > 0, "Principal must be > 0");
         require(totalRepayment >= principal, "Repayment must be >= principal");
         require(durationInMonths > 0 && durationInMonths <= 36, "Duration: 1-36 months");
@@ -119,12 +140,13 @@ contract LoanAgreementFactory {
             totalRepayment: totalRepayment,
             durationInMonths: durationInMonths,
             funded: false,
-            agreementAddress: address(0)
+            agreementAddress: address(0),
+            mode: mode
         });
 
         borrowerRequestIds[msg.sender].push(requestCounter);
 
-        emit LoanRequested(requestCounter, msg.sender, principal, totalRepayment, durationInMonths);
+        emit LoanRequested(requestCounter, msg.sender, principal, totalRepayment, durationInMonths, mode);
     }
 
     /**
@@ -138,12 +160,32 @@ contract LoanAgreementFactory {
         require(request.id != 0, "Request does not exist");
         require(!request.funded, "Already funded");
         require(msg.sender != request.borrower, "Cannot fund own loan");
-        require(msg.value == request.principal, "Send exact principal amount");
+        
+        LoanAgreement.LoanMode mode = request.mode;
+        address token = address(0);
+        uint256 passedValue = 0;
+
+        if (mode == LoanAgreement.LoanMode.ETH) {
+            require(msg.value == request.principal, "Send exact principal amount");
+            passedValue = msg.value;
+        } else {
+            require(msg.value == 0, "ERC20 mode should not receive ETH");
+            token = repaymentToken;
+            
+            // In ERC20 mode, factory pulls tokens directly from lender to borrower
+            // The lender must have approved the factory for this transfer
+            require(
+                IERC20(repaymentToken).transferFrom(msg.sender, request.borrower, request.principal),
+                "ERC20 transfer failed"
+            );
+        }
 
         request.funded = true;
 
-        // Deploy individual LoanAgreement — forwards principal to borrower in constructor
-        LoanAgreement agreement = new LoanAgreement{value: msg.value}(
+        // Deploy individual LoanAgreement
+        LoanAgreement agreement = new LoanAgreement{value: passedValue}(
+            mode,
+            token,
             request.borrower,
             msg.sender,              // lender
             request.principal,
@@ -151,7 +193,6 @@ contract LoanAgreementFactory {
             request.durationInMonths,
             treasury,
             INSURANCE_BPS * request.totalRepayment / 10_000,
-            repaymentToken,
             automationService,
             address(trustScoreRegistry)
         );

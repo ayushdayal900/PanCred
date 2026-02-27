@@ -46,6 +46,10 @@ const userSchema = new mongoose.Schema({
     trustScore: {
         type: Number,
         default: 0, // 0-1000 scale, updated by simulated ML model/repayments
+    },
+    hasClaimedFaucet: {
+        type: Boolean,
+        default: false
     }
 
 }, { timestamps: true });
