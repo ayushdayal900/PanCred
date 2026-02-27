@@ -1,9 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import BorrowerDashboard from './BorrowerDashboard';
 import LenderDashboard from './LenderDashboard';
-import { FiLoader, FiTrendingUp, FiUser } from 'react-icons/fi';
+import { FiLoader, FiTrendingUp, FiUser, FiShield } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { ethers } from 'ethers';
+import addresses from '../contracts/addresses.json';
+
+// ---------- Protocol Insurance Pool Widget ----------
+const InsurancePoolWidget = () => {
+    const [balance, setBalance] = useState("0");
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchBalance = async () => {
+            try {
+                const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+                const bal = await provider.getBalance(addresses.treasury);
+                setBalance(ethers.formatEther(bal));
+            } catch (err) {
+                console.error("Failed to fetch treasury balance:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchBalance();
+    }, []);
+
+    return (
+        <div className="w-full bg-slate-900 border-b border-emerald-500/20 py-3 mt-16 px-4">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500 shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                        <FiShield size={20} />
+                    </div>
+                    <div>
+                        <h4 className="text-white font-black italic tracking-wide text-xs md:text-sm uppercase">Protocol Insurance Pool</h4>
+                        <p className="text-emerald-500/80 text-[10px] md:text-xs font-medium uppercase tracking-widest">Securing lenders with 1% dynamic fee</p>
+                    </div>
+                </div>
+                <div className="text-right flex items-center gap-3">
+                    {loading ? (
+                        <div className="h-6 w-20 bg-slate-800 animate-pulse rounded-md"></div>
+                    ) : (
+                        <div className="text-emerald-400 font-black text-xl tracking-tighter shadow-emerald-500/20 drop-shadow-md">
+                            {Number(balance).toFixed(4)} <span className="text-xs text-emerald-600/80 uppercase">ETH</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ---------- Role Selector ----------
 const RoleSelector = ({ onSelect }) => {
@@ -101,8 +149,22 @@ const Dashboard = () => {
     }
 
     // Role properly set
-    if (userProfile.role === 'Lender') return <LenderDashboard />;
-    if (userProfile.role === 'Borrower') return <BorrowerDashboard />;
+    if (userProfile.role === 'Lender') {
+        return (
+            <>
+                <InsurancePoolWidget />
+                <LenderDashboard />
+            </>
+        );
+    }
+    if (userProfile.role === 'Borrower') {
+        return (
+            <>
+                <InsurancePoolWidget />
+                <BorrowerDashboard />
+            </>
+        );
+    }
 
     // Role is 'Unassigned' or missing — show role picker
     return <RoleSelector onSelect={handleRoleSelect} />;
