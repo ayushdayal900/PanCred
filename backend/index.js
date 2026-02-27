@@ -12,6 +12,7 @@ const userRoutes = require('./routes/userRoutes');
 const loanRoutes = require('./routes/loanRoutes');
 const authRoutes = require('./routes/authRoutes');
 const faucetRoutes = require('./routes/faucetRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 const port = process.env.PORT || 5000;
 const { connectProvider, listenToContractEvents } = require('./services/blockchainService');
 const { startAutoRepayScheduler } = require('./services/autoRepayService');
@@ -35,6 +36,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/loans', loanRoutes);
 app.use('/api/faucet', faucetRoutes);
 app.use('/auth', authRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Basic Route for health check
 app.get('/', (req, res) => {
