@@ -95,4 +95,8 @@ exports.handleChatMessage = async (req, res) => {
       .status(500)
       .json({ success: false, error: "Internal Server Error" });
   }
+<<<<<<< HEAD
 };
+=======
+};
+>>>>>>> 7bb82d22ac95cc74b6c54273783ab9af5d4ffe3d

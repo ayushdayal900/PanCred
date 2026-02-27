@@ -73,4 +73,8 @@ CRITICAL LANGUAGE INSTRUCTION:
   }
 });
 
+<<<<<<< HEAD
 module.exports = router;
+=======
+module.exports = router;
+>>>>>>> 7bb82d22ac95cc74b6c54273783ab9af5d4ffe3d

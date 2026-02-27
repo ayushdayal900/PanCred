@@ -282,4 +282,8 @@ const SupportBot = () => {
   );
 };
 
+<<<<<<< HEAD
 export default SupportBot;
+=======
+export default SupportBot;
+>>>>>>> 7bb82d22ac95cc74b6c54273783ab9af5d4ffe3d
