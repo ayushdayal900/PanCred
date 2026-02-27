@@ -37,21 +37,27 @@ const Lend = () => {
 
             const formatted = raw
                 .filter(r => !r.funded) // Only show open (unfunded) requests
-                .map(r => ({
-                    id: Number(r.id),
-                    borrower: r.borrower,
-                    principal: ethers.formatEther(r.principal),
-                    totalRepayment: ethers.formatEther(r.totalRepayment),
-                    durationInMonths: Number(r.durationInMonths),
-                    funded: r.funded,
-                    agreementAddress: r.agreementAddress,
-                    monthlyPayment: (Number(ethers.formatEther(r.totalRepayment)) / Number(r.durationInMonths)).toFixed(6),
-                    yield: (Number(ethers.formatEther(r.totalRepayment)) - Number(ethers.formatEther(r.principal))).toFixed(6),
-                    yieldPct: ((
-                        (Number(ethers.formatEther(r.totalRepayment)) - Number(ethers.formatEther(r.principal)))
-                        / Number(ethers.formatEther(r.principal))
-                    ) * 100).toFixed(1),
-                }))
+                .map(r => {
+                    const rMode = Number(r.mode) || 0; // The struct was updated to have `mode`
+                    const decimals = rMode === 0 ? 18 : 6;
+
+                    return {
+                        id: Number(r.id),
+                        borrower: r.borrower,
+                        mode: rMode,
+                        principal: ethers.formatUnits(r.principal, decimals),
+                        totalRepayment: ethers.formatUnits(r.totalRepayment, decimals),
+                        durationInMonths: Number(r.durationInMonths),
+                        funded: r.funded,
+                        agreementAddress: r.agreementAddress,
+                        monthlyPayment: (Number(ethers.formatUnits(r.totalRepayment, decimals)) / Number(r.durationInMonths)).toFixed(6),
+                        yield: (Number(ethers.formatUnits(r.totalRepayment, decimals)) - Number(ethers.formatUnits(r.principal, decimals))).toFixed(6),
+                        yieldPct: ((
+                            (Number(ethers.formatUnits(r.totalRepayment, decimals)) - Number(ethers.formatUnits(r.principal, decimals)))
+                            / Number(ethers.formatUnits(r.principal, decimals))
+                        ) * 100).toFixed(1),
+                    };
+                })
                 .filter(r => r.borrower.toLowerCase() !== walletAddress?.toLowerCase()); // Exclude own requests
 
             setRequests(formatted);
@@ -78,10 +84,28 @@ const Lend = () => {
             const signer = await provider.getSigner();
             const factory = new ethers.Contract(addresses.loanFactory, factoryAbi, signer);
 
-            const principalWei = ethers.parseEther(request.principal);
+            let tx;
+            if (request.mode === 0) {
+                // native ETH
+                const principalWei = ethers.parseEther(request.principal);
+                toast.loading('Confirm in wallet — send exact principal...', { id: tid });
+                tx = await factory.fundLoanRequest(request.id, { value: principalWei });
+            } else {
+                // ERC20 token setup - approval needed for lender so Factory can transferFrom
+                const tokenAbi = ["function approve(address spender, uint256 amount) public returns (bool)", "function allowance(address owner, address spender) view returns (uint256)"];
+                const usdt = new ethers.Contract(addresses.mockUSDT, tokenAbi, signer);
+                const principalUnits = ethers.parseUnits(request.principal, 6);
 
-            toast.loading('Confirm in wallet — send exact principal...', { id: tid });
-            const tx = await factory.fundLoanRequest(request.id, { value: principalWei });
+                const currentAllowance = await usdt.allowance(walletAddress, addresses.loanFactory);
+                if (currentAllowance < principalUnits) {
+                    toast.loading('Approving tUSDT for loan bridge...', { id: tid });
+                    const approvetx = await usdt.approve(addresses.loanFactory, principalUnits);
+                    await approvetx.wait();
+                }
+
+                toast.loading('Confirm in wallet...', { id: tid });
+                tx = await factory.fundLoanRequest(request.id); // zero msg.value for ERC20
+            }
 
             toast.loading('Deploying LoanAgreement contract...', { id: tid });
             await tx.wait();
@@ -195,7 +219,7 @@ const Lend = () => {
                             <div className="mb-6">
                                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">You Lend</p>
                                 <p className="text-4xl font-black text-white italic tracking-tighter">
-                                    {request.principal} <span className="text-slate-500 text-sm font-normal not-italic">ETH</span>
+                                    {request.principal} <span className="text-slate-500 text-sm font-normal not-italic">{request.mode === 0 ? 'ETH' : 'tUSDT'}</span>
                                 </p>
                             </div>
 
@@ -206,7 +230,7 @@ const Lend = () => {
                                         <FiTrendingUp size={11} className="text-emerald-500" />
                                         <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">You Earn</p>
                                     </div>
-                                    <p className="text-emerald-400 font-black italic">{request.totalRepayment} ETH</p>
+                                    <p className="text-emerald-400 font-black italic">{request.totalRepayment} {request.mode === 0 ? 'ETH' : 'tUSDT'}</p>
                                 </div>
                                 <div className="text-center border-x border-slate-900">
                                     <div className="flex items-center justify-center gap-1 mb-1">
@@ -220,7 +244,7 @@ const Lend = () => {
                                         <FiZap size={11} className="text-amber-500" />
                                         <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Monthly</p>
                                     </div>
-                                    <p className="text-white font-black italic text-[11px]">{request.monthlyPayment} ETH</p>
+                                    <p className="text-white font-black italic text-[11px]">{request.monthlyPayment} {request.mode === 0 ? 'ETH' : 'tUSDT'}</p>
                                 </div>
                             </div>
 
@@ -228,7 +252,7 @@ const Lend = () => {
                             <p className="text-[9px] text-slate-600 font-medium mb-6">
                                 Insurance: {INSURANCE_FEE} ETH total distributed to treasury across installments.
                                 Your net per month: <span className="text-slate-400 font-black">
-                                    {(Number(request.monthlyPayment) - INSURANCE_FEE / request.durationInMonths).toFixed(6)} ETH
+                                    {(Number(request.monthlyPayment) - (request.mode === 0 ? INSURANCE_FEE / request.durationInMonths : 0)).toFixed(6)} {request.mode === 0 ? 'ETH' : 'tUSDT'}
                                 </span>
                             </p>
 
@@ -240,7 +264,7 @@ const Lend = () => {
                             >
                                 {funding === request.id
                                     ? <><FiLoader className="animate-spin inline mr-2" />Deploying Agreement...</>
-                                    : <><FiCheckCircle size={14} className="inline mr-2" />Fund {request.principal} ETH</>
+                                    : <><FiCheckCircle size={14} className="inline mr-2" />Fund {request.principal} {request.mode === 0 ? 'ETH' : 'tUSDT'}</>
                                 }
                             </button>
                         </div>

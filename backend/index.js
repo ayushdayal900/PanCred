@@ -11,12 +11,17 @@ const app = express();
 const userRoutes = require('./routes/userRoutes');
 const loanRoutes = require('./routes/loanRoutes');
 const authRoutes = require('./routes/authRoutes');
+const faucetRoutes = require('./routes/faucetRoutes');
 const port = process.env.PORT || 5000;
 const { connectProvider, listenToContractEvents } = require('./services/blockchainService');
+const { startAutoRepayScheduler } = require('./services/autoRepayService');
 
 // Initialize Blockchain Service
 connectProvider();
 listenToContractEvents();
+
+// Initialize Automatic Repayment Cron (every 60 seconds)
+startAutoRepayScheduler();
 
 // Security and utility Middlewares
 app.use(helmet());
@@ -28,6 +33,7 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // Core API Routes
 app.use('/api/users', userRoutes);
 app.use('/api/loans', loanRoutes);
+app.use('/api/faucet', faucetRoutes);
 app.use('/auth', authRoutes);
 
 // Basic Route for health check

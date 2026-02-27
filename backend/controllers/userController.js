@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const TrustScoreHistory = require('../models/TrustScoreHistory');
+const trustScore = require('../services/trustScoreService');
 
 // Generate JWT
 const generateToken = (id) => {
@@ -105,6 +106,11 @@ exports.walletLogin = async (req, res) => {
 exports.loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
+
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({ success: false, message: 'Database connecting, please try again in a few seconds...' });
+        }
 
         const user = await User.findOne({ email });
 
@@ -327,6 +333,15 @@ exports.submitKYC = async (req, res) => {
             console.error('[TrustScore] Failed to record NFT mint history (non-critical):', histErr.message);
         }
 
+        // ── Trust Score: +50 for SBT Minted, +100 for KYC Verified ──
+        try {
+            await trustScore.increaseScore(req.user.id, 50, trustScore.ACTIONS.SBT_MINTED);
+            await trustScore.increaseScore(req.user.id, 100, trustScore.ACTIONS.KYC_VERIFIED);
+            console.log(`[TrustScore] SBT Minted (+50) and KYC Verified (+100) applied to user ${req.user.id}`);
+        } catch (tsErr) {
+            console.error('[TrustScore] Post-KYC trust score boost failed (non-critical):', tsErr.message);
+        }
+
         // Send welcome email – fire-and-forget, never block the API response
         try {
             const transporter = nodemailer.createTransport({
@@ -401,3 +416,37 @@ exports.submitKYC = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Get current user's profile including trust score, completedLoans, trustHistory
+// @route   GET /api/users/me
+// @access  Private
+exports.getMe = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id)
+            .select('-password')
+            .lean();
+
+        if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                kycStatus: user.kycStatus,
+                walletAddress: user.walletAddress,
+                trustScore: user.trustScore ?? 300,
+                completedLoans: user.completedLoans ?? 0,
+                hasReceivedFirstInstallmentBonus: user.hasReceivedFirstInstallmentBonus ?? false,
+                hasReceivedFirstFullRepaymentBonus: user.hasReceivedFirstFullRepaymentBonus ?? false,
+                trustHistory: (user.trustHistory ?? []).slice(-50).reverse(), // Last 50, newest first
+                nftIssued: user.nftIssued,
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+

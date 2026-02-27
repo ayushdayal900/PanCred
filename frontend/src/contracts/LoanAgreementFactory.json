@@ -11,6 +11,21 @@
           "internalType": "address",
           "name": "_treasury",
           "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_repaymentToken",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_automationService",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_trustScoreRegistry",
+          "type": "address"
         }
       ],
       "stateMutability": "nonpayable",
@@ -73,6 +88,12 @@
           "internalType": "uint256",
           "name": "durationInMonths",
           "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum LoanAgreement.LoanMode",
+          "name": "mode",
+          "type": "uint8"
         }
       ],
       "name": "LoanRequested",
@@ -86,6 +107,19 @@
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "automationService",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -166,6 +200,34 @@
       "inputs": [
         {
           "internalType": "uint256",
+          "name": "principal",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "totalRepayment",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "durationInMonths",
+          "type": "uint256"
+        },
+        {
+          "internalType": "enum LoanAgreement.LoanMode",
+          "name": "mode",
+          "type": "uint8"
+        }
+      ],
+      "name": "createLoanRequestWithMode",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
           "name": "requestId",
           "type": "uint256"
         }
@@ -215,6 +277,11 @@
               "internalType": "address",
               "name": "agreementAddress",
               "type": "address"
+            },
+            {
+              "internalType": "enum LoanAgreement.LoanMode",
+              "name": "mode",
+              "type": "uint8"
             }
           ],
           "internalType": "struct LoanAgreementFactory.LoanRequest[]",
@@ -363,6 +430,24 @@
           "internalType": "address",
           "name": "agreementAddress",
           "type": "address"
+        },
+        {
+          "internalType": "enum LoanAgreement.LoanMode",
+          "name": "mode",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "repaymentToken",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -387,6 +472,19 @@
       "outputs": [
         {
           "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "trustScoreRegistry",
+      "outputs": [
+        {
+          "internalType": "contract ITrustScoreRegistry",
           "name": "",
           "type": "address"
         }

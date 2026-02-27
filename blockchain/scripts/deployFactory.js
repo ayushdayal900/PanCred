@@ -18,23 +18,62 @@ async function main() {
 
     const identityAddress = current.identity;
     const treasuryAddress = current.treasury || deployer.address;
+    const repaymentToken = current.mockUSDT;
+    const trustScoreAddress = current.trustScore;
 
     if (!identityAddress) {
         throw new Error("Identity contract address not found in deployedAddresses.json. Deploy Identity first.");
     }
+    if (!repaymentToken) {
+        throw new Error("mockUSDT address not found in deployedAddresses.json. Run deployMockUSDT.js first.");
+    }
+    if (!trustScoreAddress) {
+        throw new Error("trustScore address not found in deployedAddresses.json.");
+    }
 
-    console.log("Using Identity:", identityAddress);
-    console.log("Using Treasury:", treasuryAddress);
+    console.log("Using Identity:       ", identityAddress);
+    console.log("Using Treasury:       ", treasuryAddress);
+    console.log("Using RepaymentToken: ", repaymentToken);
+    console.log("Using TrustScore:     ", trustScoreAddress);
+
+    // automationService = deployer wallet (matches backend PRIVATE_KEY)
+    const automationService = deployer.address;
+    console.log("Using AutomationSvc:  ", automationService);
 
     // --- Compile ---
     await hre.run("compile");
 
+    // Pre-authorize factory on TrustScoreRegistry (so fundLoanRequest can call setAuthorized)
+    // This step must run BEFORE factory deploy is not needed since factory can be authorized after.
+    // We'll authorize the factory address AFTER deployment below.
+
     // --- Deploy LoanAgreementFactory ---
     const Factory = await hre.ethers.getContractFactory("LoanAgreementFactory");
-    const factory = await Factory.deploy(identityAddress, treasuryAddress);
+    const factory = await Factory.deploy(
+        identityAddress,
+        treasuryAddress,
+        repaymentToken,
+        automationService,
+        trustScoreAddress
+    );
     await factory.waitForDeployment();
     const factoryAddress = await factory.getAddress();
     console.log("LoanAgreementFactory deployed to:", factoryAddress);
+
+    // Pre-authorize the new factory on TrustScoreRegistry
+    // so fundLoanRequest can call setAuthorized(agreementAddr, true) for each new agreement.
+    const trustRegistryAbi = [
+        "function setAuthorized(address addr, bool status) external"
+    ];
+    const trustRegistry = new hre.ethers.Contract(trustScoreAddress, trustRegistryAbi, deployer);
+    console.log("Authorizing factory on TrustScoreRegistry...");
+    try {
+        const authTx = await trustRegistry.setAuthorized(factoryAddress, true);
+        await authTx.wait();
+        console.log("✅  Factory authorized on TrustScoreRegistry:", factoryAddress);
+    } catch (authErr) {
+        console.warn("⚠️   Could not authorize factory (may not be owner):", authErr.message);
+    }
 
     // --- Update deployedAddresses.json ---
     current.loanFactory = factoryAddress;

@@ -51,6 +51,18 @@ const loanRequestSchema = new mongoose.Schema({
     insuranceActivated: {
         type: Boolean,
         default: false,
+    },
+    loanMode: {
+        type: Number,   // 0 = ETH, 1 = ERC20/tUSDT
+        default: 1,
+    },
+    firstInstallmentRewarded: {
+        type: Boolean,
+        default: false, // Prevents duplicate +50 first-installment bonus per loan
+    },
+    onChainProcessed: {
+        type: Boolean,
+        default: false,
     }
 }, { timestamps: true });
 

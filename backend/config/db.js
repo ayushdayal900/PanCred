@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const { createClient } = require('redis');
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const connectDB = async () => {
     try {
@@ -7,10 +9,10 @@ const connectDB = async () => {
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
         console.error(`Error connecting to MongoDB: ${error.message}`);
-        process.exit(1);
+        // If the initial connection fails, retry after a few seconds
+        setTimeout(connectDB, 5000);
     }
 };
-
 let redisClient;
 
 const connectRedis = async () => {
