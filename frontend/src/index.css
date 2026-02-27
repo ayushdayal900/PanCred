@@ -110,3 +110,87 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-fintech-muted);
 }
+
+/* ── AWS Amplify FaceLivenessDetector — dark theme overrides ─────────────── */
+.liveness-dark-wrapper {
+  --amplify-colors-background-primary: #0a0f1e;
+  --amplify-colors-background-secondary: #0f172a;
+  --amplify-colors-background-tertiary: #1e293b;
+  --amplify-colors-border-primary: rgba(255,255,255,0.08);
+  --amplify-colors-border-secondary: rgba(255,255,255,0.05);
+  --amplify-colors-font-primary: #f1f5f9;
+  --amplify-colors-font-secondary: #94a3b8;
+  --amplify-colors-font-tertiary: #64748b;
+  --amplify-colors-brand-primary-10: rgba(37,99,235,0.1);
+  --amplify-colors-brand-primary-80: #2563eb;
+  --amplify-colors-brand-primary-90: #1d4ed8;
+  --amplify-colors-brand-primary-100: #1e40af;
+  --amplify-components-button-primary-background-color: #2563eb;
+  --amplify-components-button-primary-hover-background-color: #1d4ed8;
+  --amplify-components-button-primary-color: #ffffff;
+}
+
+.liveness-dark-wrapper [data-amplify-liveness] {
+  background: transparent !important;
+}
+
+.liveness-dark-wrapper .amplify-liveness-start-screen {
+  background: #0f172a !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 16px !important;
+}
+
+.liveness-dark-wrapper .amplify-liveness-start-screen__header,
+.liveness-dark-wrapper .amplify-liveness-start-screen__body {
+  background: transparent !important;
+  color: #f1f5f9 !important;
+}
+
+.liveness-dark-wrapper .amplify-liveness-toast {
+  background: #1e293b !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  border-radius: 12px !important;
+  color: #f1f5f9 !important;
+  backdrop-filter: blur(20px);
+}
+
+.liveness-dark-wrapper .amplify-liveness-toast__header {
+  color: #f1f5f9 !important;
+  font-weight: 700 !important;
+}
+
+.liveness-dark-wrapper .amplify-liveness-toast__message {
+  color: #94a3b8 !important;
+}
+
+.liveness-dark-wrapper button[data-variation="primary"] {
+  background: linear-gradient(135deg, #2563eb, #4f46e5) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  font-size: 0.75rem !important;
+  padding: 0.85rem 2rem !important;
+  box-shadow: 0 4px 20px rgba(37,99,235,0.4) !important;
+  transition: all 0.2s !important;
+}
+
+.liveness-dark-wrapper button[data-variation="primary"]:hover {
+  background: linear-gradient(135deg, #1d4ed8, #4338ca) !important;
+  box-shadow: 0 4px 24px rgba(37,99,235,0.6) !important;
+}
+
+.liveness-dark-wrapper .amplify-liveness-camera-module {
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  /* Make the camera module significantly larger */
+  min-height: 50vh !important;
+}
+
+/* Force the video inside to scale up */
+.liveness-dark-wrapper .amplify-liveness-video {
+  transform: scale(1.3) !important;
+  transform-origin: center center !important;
+}

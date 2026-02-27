@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import { useAuth, api } from '../context/AuthContext';
 import { ethers } from 'ethers';
 import { useAccount, useConfig, useWalletClient } from 'wagmi';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { FiLoader, FiCheckCircle, FiInfo, FiActivity, FiShield, FiPlus, FiCalendar, FiTrendingUp, FiAlertCircle } from 'react-icons/fi';
+import { FiLoader, FiCheckCircle, FiInfo, FiActivity, FiShield, FiPlus, FiCalendar, FiTrendingUp, FiAlertCircle, FiChevronDown, FiChevronUp, FiAward } from 'react-icons/fi';
 
 
 import addresses from '../contracts/addresses.json';
@@ -44,6 +43,39 @@ const BorrowerDashboard = () => {
     const [agreements, setAgreements] = useState([]);
     const [agreementsLoading, setAgreementsLoading] = useState(false);
     const [payingInstallment, setPayingInstallment] = useState(null);
+    const [myAds, setMyAds] = useState([]);
+    const [myAdsLoading, setMyAdsLoading] = useState(false);
+
+    // Trust score data (from backend /me endpoint)
+    const [trustData, setTrustData] = useState({
+        trustScore: userProfile?.trustScore ?? 300,
+        completedLoans: userProfile?.completedLoans ?? 0,
+        trustHistory: []
+    });
+    const [showTrustHistory, setShowTrustHistory] = useState(false);
+
+    const getTrustTier = (score) => {
+        if (score >= 850) return { label: 'Prime', color: 'text-emerald-400' };
+        if (score >= 700) return { label: 'Trusted', color: 'text-blue-400' };
+        if (score >= 500) return { label: 'Building Credit', color: 'text-amber-400' };
+        return { label: 'New Borrower', color: 'text-slate-500' };
+    };
+
+    const fetchTrustData = async () => {
+        if (!token && !userProfile?.token) return;
+        try {
+            const res = await api.get('/users/me');
+            if (res.data.success) {
+                setTrustData({
+                    trustScore: res.data.data.trustScore ?? 300,
+                    completedLoans: res.data.data.completedLoans ?? 0,
+                    trustHistory: res.data.data.trustHistory ?? [],
+                });
+            }
+        } catch (err) {
+            console.error('[BorrowerDashboard] Failed to fetch trust data:', err.message);
+        }
+    };
 
 
     const checkContractSync = async () => {
@@ -96,7 +128,9 @@ const BorrowerDashboard = () => {
             checkUserIdentity();
             fetchOnChainLoans();
             fetchMyLoans();
+            fetchMyAds();
             checkContractSync();
+            fetchTrustData();
         }
 
         // Event listeners for real-time updates
@@ -138,12 +172,17 @@ const BorrowerDashboard = () => {
                 try {
                     const agr = new ethers.Contract(addr, agreementAbi, provider);
                     const status = await agr.getStatus();
+
+                    let mode = 0;
+                    try { mode = Number(await agr.getLoanMode()); } catch { mode = 0; }
+
                     return {
                         address: addr,
+                        mode,
                         paymentsMade: Number(status._paymentsMade),
                         totalDuration: Number(status._totalDuration),
                         nextDueTimestamp: Number(status._nextDueTimestamp),
-                        monthlyPayment: ethers.formatUnits(status._monthlyPayment, 6),
+                        monthlyPayment: mode === 0 ? ethers.formatEther(status._monthlyPayment) : ethers.formatUnits(status._monthlyPayment, 6),
                         remainingPayments: Number(status._remainingPayments),
                         completed: status._completed,
                         missedPayments: Number(status._missedPayments),
@@ -212,22 +251,31 @@ const BorrowerDashboard = () => {
             const provider = new ethers.BrowserProvider(walletClient.transport);
             const signer = await provider.getSigner();
 
-            // 1. Check and approve tUSDT
-            const tokenAbi = ["function approve(address spender, uint256 amount) public returns (bool)", "function allowance(address owner, address spender) view returns (uint256)"];
-            const usdt = new ethers.Contract(addresses.mockUSDT, tokenAbi, signer);
-            const valueUnits = ethers.parseUnits(agreement.monthlyPayment.toString(), 6);
+            // Branch based on loan mode
+            let tx;
+            if (agreement.mode === 0) {
+                // ETH mode: send native ETH via repayETH()
+                const agr = new ethers.Contract(agreement.address, agreementAbi, signer);
+                const valueUnits = ethers.parseEther(agreement.monthlyPayment.toString()); // ETH has 18 decimals
+                toast.loading('Confirm ETH payment in wallet...', { id: tid });
+                tx = await agr.repayETH({ value: valueUnits });
+            } else {
+                // ERC20 mode: approve tUSDT then call repayInstallment()
+                const tokenAbi = ["function approve(address spender, uint256 amount) public returns (bool)", "function allowance(address owner, address spender) view returns (uint256)"];
+                const usdt = new ethers.Contract(addresses.mockUSDT, tokenAbi, signer);
+                const valueUnits = ethers.parseUnits(agreement.monthlyPayment.toString(), 6); // MockUSDT has 6
 
-            const currentAllowance = await usdt.allowance(walletAddress, agreement.address);
-            if (currentAllowance < valueUnits) {
-                toast.loading('Approving tUSDT for payment...', { id: tid });
-                const approvetx = await usdt.approve(agreement.address, valueUnits);
-                await approvetx.wait();
+                const currentAllowance = await usdt.allowance(walletAddress, agreement.address);
+                if (currentAllowance < valueUnits) {
+                    toast.loading('Approving tUSDT for payment...', { id: tid });
+                    const approvetx = await usdt.approve(agreement.address, valueUnits);
+                    await approvetx.wait();
+                }
+
+                const agr = new ethers.Contract(agreement.address, agreementAbi, signer);
+                toast.loading('Confirm token payment in wallet...', { id: tid });
+                tx = await agr.repayInstallment();
             }
-
-            // 2. Call repayInstallment (not payable)
-            const agr = new ethers.Contract(agreement.address, agreementAbi, signer);
-            toast.loading('Confirm payment in wallet...', { id: tid });
-            const tx = await agr.repayInstallment();
 
             toast.loading('Broadcasting...', { id: tid });
             await tx.wait();
@@ -316,14 +364,27 @@ const BorrowerDashboard = () => {
 
     const fetchMyLoans = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/loans/my', {
-                headers: { Authorization: `Bearer ${token || userProfile.token}` }
-            });
+            const res = await api.get('/loans/my');
             if (res.data.success) {
                 setMyLoans(res.data.data);
             }
         } catch (error) {
             console.error("Error fetching my loans:", error);
+        }
+    };
+
+    const fetchMyAds = async () => {
+        if (!token && !userProfile?.token) return;
+        setMyAdsLoading(true);
+        try {
+            const res = await api.get('/loans/my-ads');
+            if (res.data.success) {
+                setMyAds(res.data.data);
+            }
+        } catch (error) {
+            console.error('[BorrowerDashboard] Error fetching my ads:', error);
+        } finally {
+            setMyAdsLoading(false);
         }
     };
 
@@ -355,10 +416,8 @@ const BorrowerDashboard = () => {
             await tx.wait();
 
             toast.loading('Finalizing with protocol...', { id: tid });
-            await axios.put(`http://localhost:5000/api/loans/${loanId}/repay`, {
+            await api.put(`/loans/${loanId}/repay`, {
                 txHash: tx.hash
-            }, {
-                headers: { Authorization: `Bearer ${token || userProfile.token}` }
             });
 
             toast.success('Loan fully repaid! Reputation increased.', { id: tid });
@@ -407,15 +466,13 @@ const BorrowerDashboard = () => {
             await tx.wait();
 
             toast.loading('Syncing proposal state...', { id: tid });
-            await axios.post('http://localhost:5000/api/loans', {
+            await api.post('/loans', {
                 borrowerId: userProfile._id,
                 amountRequested: Number(amount),
                 interestRate: 10,
                 durationMonths: Number(duration),
                 purpose,
                 txHash: tx.hash
-            }, {
-                headers: { Authorization: `Bearer ${token || userProfile.token}` }
             });
 
             toast.success('Proposal live in marketplace!', { id: tid });
@@ -423,6 +480,7 @@ const BorrowerDashboard = () => {
             setDuration('');
             setPurpose('');
             fetchMyLoans();
+            fetchMyAds();
         } catch (error) {
             console.error("[Protocol Error] Request failed:", error);
             toast.error(parseBlockchainError(error), { id: tid });
@@ -448,13 +506,37 @@ const BorrowerDashboard = () => {
                 {/* Left Column: Metrics & Form */}
                 <div className="space-y-6 md:space-y-8 order-2 lg:order-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6">
+                        {/* ── Protocol Reputation Card ── */}
                         <div className="premium-card !p-8">
-                            <div className="flex items-center gap-3 text-slate-500 mb-6">
-                                <FiActivity className="text-blue-500" />
-                                <span className="text-[9px] uppercase font-black tracking-widest">Protocol Reputation</span>
+                            <div className="flex items-center gap-3 text-slate-500 mb-4">
+                                <FiAward className="text-blue-500" />
+                                <span className="text-[9px] uppercase font-black tracking-widest">Trust Score</span>
                             </div>
-                            <div className="text-5xl md:text-6xl font-black text-white mb-2 tracking-tighter italic">{userProfile?.trustScore || 0}</div>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Calculated On-Chain</p>
+                            <div className="text-5xl md:text-6xl font-black text-white mb-1 tracking-tighter italic">{trustData.trustScore}</div>
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${getTrustTier(trustData.trustScore).color}`}>
+                                    {getTrustTier(trustData.trustScore).label}
+                                </span>
+                            </div>
+                            {/* Progress to 700 */}
+                            {trustData.trustScore < 700 && (
+                                <div className="mt-2">
+                                    <div className="flex justify-between text-[8px] text-slate-600 font-bold mb-1">
+                                        <span>Progress to ETH unlock</span>
+                                        <span>{trustData.trustScore} / 700</span>
+                                    </div>
+                                    <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full transition-all duration-700"
+                                            style={{ width: `${Math.min(100, ((trustData.trustScore - 300) / 400) * 100)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            <div className="mt-4 pt-4 border-t border-slate-900 flex justify-between items-center">
+                                <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest">Completed Loans</span>
+                                <span className="text-lg font-black text-white italic">{trustData.completedLoans}</span>
+                            </div>
                         </div>
 
                         <div className={`premium-card !p-8 border-l-4 ${hasIdentity ? 'border-l-emerald-500/50' : 'border-l-red-500/50'}`}>
@@ -517,29 +599,6 @@ const BorrowerDashboard = () => {
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="premium-card !p-8 md:!p-10">
-                        <h3 className="text-xl md:text-2xl font-black text-white mb-8 tracking-tight italic flex items-center gap-3">
-                            <FiPlus className="text-blue-500" /> Request Capital
-                        </h3>
-                        <form onSubmit={handleSubmitRequest} className="space-y-6">
-                            <div>
-                                <label className="block text-[9px] uppercase font-black text-slate-600 tracking-[0.2em] mb-3 px-1">Principal (ETH)</label>
-                                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required min="0.01" step="0.01" placeholder="0.00" className="w-full bg-fintech-dark border border-fintech-border text-white rounded-xl p-4 md:p-5 focus:border-blue-500 focus:outline-none transition-all font-mono text-lg shadow-inner" />
-                            </div>
-                            <div>
-                                <label className="block text-[9px] uppercase font-black text-slate-600 tracking-[0.2em] mb-3 px-1">Term (Months)</label>
-                                <input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} required min="1" placeholder="12" className="w-full bg-fintech-dark border border-fintech-border text-white rounded-xl p-4 md:p-5 focus:border-blue-500 focus:outline-none transition-all font-black shadow-inner" />
-                            </div>
-                            <div>
-                                <label className="block text-[9px] uppercase font-black text-slate-600 tracking-[0.2em] mb-3 px-1">Proposal Purpose</label>
-                                <textarea value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Describe your plan..." required className="w-full bg-fintech-dark border border-fintech-border text-white rounded-xl p-4 md:p-5 h-28 md:h-32 focus:border-blue-500 focus:outline-none transition-all resize-none shadow-inner text-sm font-medium"></textarea>
-                            </div>
-                            <button type="submit" disabled={loading} className="btn-primary w-full !py-5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em]">
-                                {loading ? <FiLoader className="animate-spin inline" /> : 'Broadcast Proposal'}
-                            </button>
-                        </form>
                     </div>
                 </div>
 
@@ -619,6 +678,79 @@ const BorrowerDashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* ── My Posted Loan Requests (Factory Ads) ── */}
+            <section className="mt-16 pt-16 border-t border-slate-900">
+                <div className="flex items-center justify-between mb-10">
+                    <div>
+                        <h2 className="text-2xl md:text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
+                            <FiPlus className="text-blue-500" /> My Posted Loan Requests
+                        </h2>
+                        <p className="text-xs text-slate-500 font-medium mt-1">All ads you have broadcast on-chain to the lender marketplace.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {myAdsLoading && <FiLoader className="text-blue-500 animate-spin" />}
+                        <span className="text-[10px] bg-slate-800 text-slate-400 px-4 py-1.5 rounded-full font-black uppercase tracking-widest w-fit">{myAds.length} Ad{myAds.length !== 1 ? 's' : ''}</span>
+                    </div>
+                </div>
+
+                {myAds.length === 0 && !myAdsLoading ? (
+                    <div className="premium-card py-16 text-center space-y-4 border-2 border-dashed border-slate-900">
+                        <div className="w-16 h-16 bg-slate-900 rounded-3xl flex items-center justify-center mx-auto text-slate-700">
+                            <FiAlertCircle size={32} />
+                        </div>
+                        <p className="text-slate-500 font-bold italic">You have not posted any loan requests yet.</p>
+                        <p className="text-slate-600 text-sm font-medium">Head to the <strong className="text-slate-400">Borrow</strong> page to post your first loan request.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {myAds.map(ad => (
+                            <div key={ad.adId} className={`premium-card !p-6 border-l-4 transition-all duration-300 hover:shadow-xl ${ad.status === 'Funded' ? 'border-l-emerald-500/60' : 'border-l-blue-500/50'}`}>
+                                {/* Ad ID + Status pill */}
+                                <div className="flex justify-between items-start mb-5">
+                                    <span className="text-[9px] font-mono text-slate-500 font-black uppercase tracking-widest">Ad #{ad.adId}</span>
+                                    <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${ad.status === 'Funded'
+                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                        }`}>
+                                        {ad.status}
+                                    </span>
+                                </div>
+
+                                {/* Principal */}
+                                <div className="mb-5">
+                                    <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Principal</p>
+                                    <p className="text-3xl font-black text-white italic tracking-tighter">
+                                        {Number(ad.principal).toFixed(4)}
+                                        <span className="text-slate-500 text-sm font-normal not-italic ml-2">{ad.loanMode}</span>
+                                    </p>
+                                </div>
+
+                                {/* Details grid */}
+                                <div className="grid grid-cols-2 gap-3 bg-slate-950/50 rounded-xl p-3 mb-5 border border-slate-900">
+                                    <div>
+                                        <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Total Repay</p>
+                                        <p className="text-xs font-black text-white">{Number(ad.totalRepayment).toFixed(4)} <span className="text-slate-500 font-normal">{ad.loanMode}</span></p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Duration</p>
+                                        <p className="text-xs font-black text-white">{ad.repaymentInterval}m</p>
+                                    </div>
+                                </div>
+
+                                {/* Mode badge */}
+                                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest ${ad.loanMode === 'ETH'
+                                    ? 'bg-blue-500/5 border border-blue-500/15 text-blue-400'
+                                    : 'bg-emerald-500/5 border border-emerald-500/15 text-emerald-400'
+                                    }`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${ad.loanMode === 'ETH' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                                    {ad.loanMode === 'ETH' ? 'Native ETH' : 'ERC20 (tUSDT)'}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </section>
 
             {/* On-Chain Archive Section */}
             <section className="mt-16 pt-16 border-t border-slate-900">
@@ -737,14 +869,30 @@ const BorrowerDashboard = () => {
                                             <div>
                                                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Monthly Installment</p>
                                                 <p className="text-3xl font-black text-white italic tracking-tighter">
-                                                    {agr.monthlyPayment} <span className="text-slate-500 text-sm font-normal not-italic">tUSDT</span>
+                                                    {agr.monthlyPayment} <span className="text-slate-500 text-sm font-normal not-italic">{agr.mode === 0 ? 'ETH' : 'tUSDT'}</span>
                                                 </p>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Total Remaining</p>
                                                 <p className="text-lg font-black text-blue-400 italic tracking-tighter">
-                                                    {(Number(agr.monthlyPayment) * agr.remainingPayments).toFixed(2)} tUSDT
+                                                    {(Number(agr.monthlyPayment) * agr.remainingPayments).toFixed(2)} {agr.mode === 0 ? 'ETH' : 'tUSDT'}
                                                 </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Configuration Details */}
+                                        <div className="grid grid-cols-2 gap-4 mb-6 bg-slate-900/40 rounded-xl p-4 border border-slate-800">
+                                            <div>
+                                                <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Currency Mode</p>
+                                                <p className="text-xs font-black text-white uppercase">{agr.mode === 0 ? 'Ethereum Base' : 'ERC20 (tUSDT)'}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Autopay Execution</p>
+                                                {agr.mode === 1 ? (
+                                                    <span className="text-xs font-black text-emerald-400 uppercase flex items-center justify-end gap-1"><FiCheckCircle size={10} /> Enabled</span>
+                                                ) : (
+                                                    <span className="text-xs font-black text-amber-500 uppercase flex items-center justify-end gap-1">Disabled</span>
+                                                )}
                                             </div>
                                         </div>
 
@@ -795,7 +943,7 @@ const BorrowerDashboard = () => {
                                                 {payingInstallment === agr.address
                                                     ? <><FiLoader className="animate-spin inline mr-2" />Paying...</>
                                                     : agr.isDue
-                                                        ? `Pay ${agr.monthlyPayment} tUSDT Now`
+                                                        ? `Pay ${agr.monthlyPayment} ${agr.mode === 0 ? 'ETH' : 'tUSDT'} Now`
                                                         : `Next Due: ${nextDue}`
                                                 }
                                             </button>
@@ -814,6 +962,66 @@ const BorrowerDashboard = () => {
                     )}
                 </section>
             )}
+            {/* ── Trust Score History Section ── */}
+            <section className="mt-16 pt-16 border-t border-slate-900">
+                <button
+                    onClick={() => setShowTrustHistory(v => !v)}
+                    className="w-full flex items-center justify-between px-2 pb-6 group"
+                >
+                    <div>
+                        <h2 className="text-2xl md:text-3xl font-black text-white italic tracking-tighter flex items-center gap-3">
+                            <FiAward className="text-blue-500" /> Trust Score History
+                        </h2>
+                        <p className="text-xs text-slate-500 font-medium mt-1">Full audit trail of your reputation updates.</p>
+                    </div>
+                    <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg text-slate-400 group-hover:text-white transition-colors">
+                        <span className="text-[10px] font-black uppercase tracking-widest">{showTrustHistory ? 'Collapse' : 'Expand'}</span>
+                        {showTrustHistory ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
+                    </div>
+                </button>
+
+                {showTrustHistory && (
+                    <div>
+                        {trustData.trustHistory.length === 0 ? (
+                            <div className="premium-card py-12 text-center border-2 border-dashed border-slate-900">
+                                <p className="text-slate-600 font-bold italic">No trust score history yet.</p>
+                                <p className="text-slate-700 text-sm font-medium mt-1">Complete KYC, mint your SBT, and repay loans to build history.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {trustData.trustHistory.map((entry, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`flex items-center justify-between px-5 py-4 rounded-xl border ${entry.points >= 0
+                                            ? 'bg-emerald-500/5 border-emerald-500/15'
+                                            : 'bg-red-500/5 border-red-500/15'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${entry.points >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                                                }`}>
+                                                {entry.points >= 0 ? '+' : ''}{entry.points}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-black text-white">{entry.action}</p>
+                                                <p className="text-[9px] text-slate-500 font-bold">
+                                                    {new Date(entry.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    {' · '}
+                                                    {new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-0.5">New Score</p>
+                                            <p className="text-lg font-black text-white italic">{entry.newScore}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </section>
         </div>
     );
 };

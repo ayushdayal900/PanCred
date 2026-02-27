@@ -6,7 +6,6 @@ import {
     FiUser, FiArrowRight, FiCreditCard, FiDollarSign,
     FiLock, FiActivity, FiCheckCircle, FiTrendingUp, FiAward
 } from 'react-icons/fi';
-import Layout from '../components/Layout';
 
 const HowItWorks = () => {
     const navigate = useNavigate();
@@ -149,133 +148,131 @@ const HowItWorks = () => {
     ];
 
     return (
-        <Layout>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-16 pb-20"
+        >
+            {/* Header */}
+            <div className="text-center space-y-4 pt-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">Protocol Documentation</p>
+                <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter">How Aamba Works</h1>
+                <p className="text-slate-400 max-w-2xl mx-auto text-sm leading-relaxed font-medium">
+                    A complete walkthrough of every layer — from identity verification to on-chain repayments and dynamic insurance — built and deployed on Ethereum Sepolia.
+                </p>
+            </div>
+
+            {/* Step Cards */}
+            <div className="space-y-6">
+                {steps.map((section, index) => (
+                    <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: index * 0.07 }}
+                        className={`premium-card relative overflow-hidden group border-l-4 ${section.border}`}
+                    >
+                        <div className="flex items-start gap-6">
+                            <div className={`w-12 h-12 flex-shrink-0 ${section.bg} ${section.color} rounded-2xl flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+                                {section.icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${section.color}`}>Step {section.step}</span>
+                                </div>
+                                <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tight mb-4">{section.title}</h3>
+                                <ul className="space-y-2">
+                                    {section.points.map((point, pi) => (
+                                        <li key={pi} className={`flex items-start gap-2 text-sm ${point.startsWith('→') ? 'text-slate-300 ml-4' : 'text-slate-400'} font-medium leading-relaxed`}>
+                                            {!point.startsWith('→') && <FiCheckCircle className={`${section.color} flex-shrink-0 mt-0.5`} size={12} />}
+                                            <span>{point}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+
+            {/* Trust Score Table */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-16 pb-20"
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="premium-card"
             >
-                {/* Header */}
-                <div className="text-center space-y-4 pt-4">
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">Protocol Documentation</p>
-                    <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter">How Aamba Works</h1>
-                    <p className="text-slate-400 max-w-2xl mx-auto text-sm leading-relaxed font-medium">
-                        A complete walkthrough of every layer — from identity verification to on-chain repayments and dynamic insurance — built and deployed on Ethereum Sepolia.
-                    </p>
-                </div>
-
-                {/* Step Cards */}
-                <div className="space-y-6">
-                    {steps.map((section, index) => (
-                        <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: index * 0.07 }}
-                            className={`premium-card relative overflow-hidden group border-l-4 ${section.border}`}
-                        >
-                            <div className="flex items-start gap-6">
-                                <div className={`w-12 h-12 flex-shrink-0 ${section.bg} ${section.color} rounded-2xl flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform duration-300`}>
-                                    {section.icon}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className={`text-[9px] font-black uppercase tracking-[0.3em] ${section.color}`}>Step {section.step}</span>
-                                    </div>
-                                    <h3 className="text-xl md:text-2xl font-black text-white italic tracking-tight mb-4">{section.title}</h3>
-                                    <ul className="space-y-2">
-                                        {section.points.map((point, pi) => (
-                                            <li key={pi} className={`flex items-start gap-2 text-sm ${point.startsWith('→') ? 'text-slate-300 ml-4' : 'text-slate-400'} font-medium leading-relaxed`}>
-                                                {!point.startsWith('→') && <FiCheckCircle className={`${section.color} flex-shrink-0 mt-0.5`} size={12} />}
-                                                <span>{point}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Trust Score Table */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="premium-card"
-                >
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center">
-                            <FiActivity />
-                        </div>
-                        <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">On-chain Registry</p>
-                            <h3 className="text-xl font-black text-white italic">Trust Score Events</h3>
-                        </div>
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center">
+                        <FiActivity />
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-slate-900">
-                                    <th className="text-left text-[9px] font-black uppercase tracking-widest text-slate-600 pb-3">Event</th>
-                                    <th className="text-left text-[9px] font-black uppercase tracking-widest text-slate-600 pb-3">Who</th>
-                                    <th className="text-right text-[9px] font-black uppercase tracking-widest text-slate-600 pb-3">Points</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-900/50">
-                                {trustEvents.map((e, i) => (
-                                    <tr key={i} className="group hover:bg-slate-900/30 transition-colors">
-                                        <td className="py-3 font-medium text-slate-300">{e.event}</td>
-                                        <td className="py-3 text-slate-500 font-medium">{e.who}</td>
-                                        <td className={`py-3 text-right font-black italic ${e.color}`}>{e.pts}</td>
-                                    </tr>
-                                ))}
-                                <tr className="border-t border-slate-800">
-                                    <td colSpan={3} className="pt-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Max Score: 1000 pts · Capped per TrustScoreRegistry.sol</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">On-chain Registry</p>
+                        <h3 className="text-xl font-black text-white italic">Trust Score Events</h3>
                     </div>
-                </motion.div>
-
-                {/* Tier Ladder */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                >
-                    {[
-                        { tier: "Bronze Pilot", range: "0 – 99 pts", color: "text-amber-600", bg: "bg-amber-600/10", border: "border-amber-600/20", icon: <FiShield /> },
-                        { tier: "Silver Verified", range: "100 – 299 pts", color: "text-slate-300", bg: "bg-slate-400/10", border: "border-slate-400/20", icon: <FiAward /> },
-                        { tier: "Gold Elite", range: "300+ pts", color: "text-yellow-400", bg: "bg-yellow-400/10", border: "border-yellow-400/20", icon: <FiStar /> },
-                    ].map((t, i) => (
-                        <div key={i} className={`premium-card border ${t.border} text-center`}>
-                            <div className={`w-12 h-12 ${t.bg} ${t.color} rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl`}>
-                                {t.icon}
-                            </div>
-                            <p className={`text-sm font-black italic ${t.color}`}>{t.tier}</p>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mt-1">{t.range}</p>
-                        </div>
-                    ))}
-                </motion.div>
-
-                {/* CTA */}
-                <div className="bg-gradient-to-br from-blue-600/20 via-slate-900 to-indigo-700/10 border border-blue-600/20 rounded-3xl p-10 text-white text-center shadow-xl">
-                    <h2 className="text-2xl md:text-3xl font-black italic tracking-tight mb-4">Ready to start your journey?</h2>
-                    <p className="text-slate-400 mb-8 max-w-xl mx-auto font-medium text-sm leading-relaxed">
-                        Join a growing network of verified participants. Mint your identity, build your trust score, and access decentralized capital — fully on-chain.
-                    </p>
-                    <button
-                        onClick={() => navigate('/signup')}
-                        className="btn-primary !py-4 px-10 rounded-2xl text-[10px] uppercase tracking-[0.2em] font-black group"
-                    >
-                        Enter Protocol <FiArrowRight className="inline ml-2 group-hover:translate-x-1 transition-transform" size={16} />
-                    </button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-b border-slate-900">
+                                <th className="text-left text-[9px] font-black uppercase tracking-widest text-slate-600 pb-3">Event</th>
+                                <th className="text-left text-[9px] font-black uppercase tracking-widest text-slate-600 pb-3">Who</th>
+                                <th className="text-right text-[9px] font-black uppercase tracking-widest text-slate-600 pb-3">Points</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900/50">
+                            {trustEvents.map((e, i) => (
+                                <tr key={i} className="group hover:bg-slate-900/30 transition-colors">
+                                    <td className="py-3 font-medium text-slate-300">{e.event}</td>
+                                    <td className="py-3 text-slate-500 font-medium">{e.who}</td>
+                                    <td className={`py-3 text-right font-black italic ${e.color}`}>{e.pts}</td>
+                                </tr>
+                            ))}
+                            <tr className="border-t border-slate-800">
+                                <td colSpan={3} className="pt-4 text-[10px] text-slate-600 font-black uppercase tracking-widest">Max Score: 1000 pts · Capped per TrustScoreRegistry.sol</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </motion.div>
-        </Layout>
+
+            {/* Tier Ladder */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
+                {[
+                    { tier: "Bronze Pilot", range: "0 – 99 pts", color: "text-amber-600", bg: "bg-amber-600/10", border: "border-amber-600/20", icon: <FiShield /> },
+                    { tier: "Silver Verified", range: "100 – 299 pts", color: "text-slate-300", bg: "bg-slate-400/10", border: "border-slate-400/20", icon: <FiAward /> },
+                    { tier: "Gold Elite", range: "300+ pts", color: "text-yellow-400", bg: "bg-yellow-400/10", border: "border-yellow-400/20", icon: <FiStar /> },
+                ].map((t, i) => (
+                    <div key={i} className={`premium-card border ${t.border} text-center`}>
+                        <div className={`w-12 h-12 ${t.bg} ${t.color} rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl`}>
+                            {t.icon}
+                        </div>
+                        <p className={`text-sm font-black italic ${t.color}`}>{t.tier}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mt-1">{t.range}</p>
+                    </div>
+                ))}
+            </motion.div>
+
+            {/* CTA */}
+            <div className="bg-gradient-to-br from-blue-600/20 via-slate-900 to-indigo-700/10 border border-blue-600/20 rounded-3xl p-10 text-white text-center shadow-xl">
+                <h2 className="text-2xl md:text-3xl font-black italic tracking-tight mb-4">Ready to start your journey?</h2>
+                <p className="text-slate-400 mb-8 max-w-xl mx-auto font-medium text-sm leading-relaxed">
+                    Join a growing network of verified participants. Mint your identity, build your trust score, and access decentralized capital — fully on-chain.
+                </p>
+                <button
+                    onClick={() => navigate('/signup')}
+                    className="btn-primary !py-4 px-10 rounded-2xl text-[10px] uppercase tracking-[0.2em] font-black group"
+                >
+                    Enter Protocol <FiArrowRight className="inline ml-2 group-hover:translate-x-1 transition-transform" size={16} />
+                </button>
+            </div>
+        </motion.div>
     );
 };
 

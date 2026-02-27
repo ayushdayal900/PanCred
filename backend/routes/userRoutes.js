@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, walletLogin, updateUserRole, submitKYC, verifyKyc, checkLiveliness } = require('../controllers/userController');
+const { registerUser, loginUser, walletLogin, updateUserRole, submitKYC, verifyKyc, checkLiveliness, getMe } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 
 const { getTrustScoreHistory } = require('../controllers/trustScoreController');
@@ -11,6 +11,7 @@ router.post('/login', loginUser);
 router.post('/wallet-login', walletLogin);
 
 // Protected Routes
+router.get('/me', protect, getMe);
 router.put('/role', protect, updateUserRole);
 router.post('/kyc', protect, submitKYC);
 router.post('/verify-kyc', protect, verifyKyc);
@@ -20,3 +21,4 @@ router.post('/liveliness', protect, checkLiveliness);
 router.get('/trust-score-history', protect, getTrustScoreHistory);
 
 module.exports = router;
+

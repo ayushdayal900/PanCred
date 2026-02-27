@@ -83,14 +83,16 @@ const SignIn = () => {
                 toast.success('Authorized. Aligning identity...', { id: tid });
 
                 // Check if they need onboarding or can go to dashboard
-                // We check on-chain if a wallet is already linked
-                const profile = result.user || userProfile; // result.user might be returned by login
+                // A user is fully onboarded if their KYC status is 'Verified' in the database
+                const profile = result.user || userProfile;
 
-                // We'll use a small timeout to let the AuthContext update if result.user isn't there
+                // Also check if they have a wallet address and soulbound token on-chain
                 const walletAddress = profile?.walletAddress || localStorage.getItem('walletAddress');
 
-                let isOnboarded = false;
-                if (walletAddress) {
+                let isOnboarded = profile?.kycStatus === 'Verified';
+
+                // If DB says not verified but we have a wallet, double check on-chain just in case
+                if (!isOnboarded && walletAddress) {
                     toast.loading('Checking on-chain Soulbound ID...', { id: tid });
                     isOnboarded = await checkIdentityOwnership(walletAddress);
                 }

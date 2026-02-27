@@ -47,6 +47,8 @@ contract LoanAgreement is ReentrancyGuard {
     bool public isPaused;
 
     // ── Events ─────────────────────────────────────────────────────────────────
+    event LoanModeSelected(address indexed borrower, LoanMode mode);
+
     event InstallmentPaid(
         address indexed borrower,
         uint256 indexed installmentNumber,
@@ -118,6 +120,8 @@ contract LoanAgreement is ReentrancyGuard {
             require(ok, "Principal transfer failed");
         }
         // In ERC20 mode, the Factory handles the transfer directly
+
+        emit LoanModeSelected(borrower, loanMode);
     }
 
     // ── Emergency Admin ────────────────────────────────────────────────────────

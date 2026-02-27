@@ -5,6 +5,6 @@
   "network": "sepolia",
   "chainId": 11155111,
   "treasury": "0xdcA6845bC20c19Cfc5074AaC0b940657FDE53B4D",
-  "loanFactory": "0x429191895551f89007Ce452219C6f10F9a3074c2",
+  "loanFactory": "0x3Dd0d9CaBA56E4E3799Fa5277f01b38B867FbA8B",
   "mockUSDT": "0xec78C8BB7d36bCd2e0ecDbdb231fB192fbA392fE"
 }

@@ -1,9 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth, api } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ethers } from 'ethers';
-import Webcam from 'react-webcam';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
+import '@aws-amplify/ui-react/styles.css';
+
+const LIVENESS_API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 import {
     FiUser,
     FiShield,
@@ -31,9 +34,25 @@ const Onboarding = () => {
     const { data: walletClient, status: walletClientStatus } = useWalletClient();
     const { switchChain } = useSwitchChain();
 
-    const [currentStep, setCurrentStep] = useState(2);
+    // Namespace sessionStorage by userId so different users get independent progress
+    const userId = userProfile?._id || 'guest';
+    const stepKey = `onboarding_step_${userId}`;
+    const aadhaarKey = `onboarding_aadhaar_${userId}`;
+
+    // Restore step from sessionStorage on refresh (cleared after completion)
+    // Extra guard: if stored step is 7 but not yet onboarded, reset to 2
+    const rawSavedStep = parseInt(sessionStorage.getItem(stepKey) || '2', 10);
+    const isOnboardedFlag = localStorage.getItem('isOnboarded') === 'true';
+    const savedStep = rawSavedStep === 7 && !isOnboardedFlag ? 2 : rawSavedStep;
+    const [currentStep, setCurrentStepRaw] = useState(savedStep);
     const [loading, setLoading] = useState(false);
     const [walletConfirmed, setWalletConfirmed] = useState(false);
+
+    // Wrapped setter that also persists to sessionStorage
+    const setCurrentStep = (step) => {
+        sessionStorage.setItem(stepKey, String(step));
+        setCurrentStepRaw(step);
+    };
 
     const isOnboarded = localStorage.getItem("isOnboarded") === "true";
     const isAuthenticated = !!userProfile;
@@ -71,12 +90,21 @@ const Onboarding = () => {
     };
 
     const [role, setRole] = useState('');
-    const [aadhaar, setAadhaar] = useState('');
+    const [aadhaar, setAadhaar] = useState(
+        () => sessionStorage.getItem(aadhaarKey) || ''
+    );
     const [txnHash, setTxnHash] = useState('');
 
-    const webcamRef = useRef(null);
-    const [blinkInstruction, setBlinkInstruction] = useState(false);
-    const [kycImage, setKycImage] = useState(null);
+    // Liveness detection state
+    const [livenessSessionId, setLivenessSessionId] = useState(null);
+    const [livenessPhase, setLivenessPhase] = useState('idle'); // idle | loading | detecting | done | error
+    const [livenessError, setLivenessError] = useState('');
+    const [livenessCredentials, setLivenessCredentials] = useState(null);
+
+    // Persist aadhaar to sessionStorage whenever it changes
+    useEffect(() => {
+        if (aadhaar) sessionStorage.setItem(aadhaarKey, aadhaar);
+    }, [aadhaar]);
 
     const progress = ((currentStep - 1) / 6) * 100;
 
@@ -124,20 +152,74 @@ const Onboarding = () => {
         }
     };
 
-    const performLiveliness = () => {
-        setLoading(true);
-        setBlinkInstruction(true);
-        const tid = toast.loading('Analyzing biometric markers...');
+    // ── AWS Rekognition Liveness ───────────────────────────────────────────────
+    const startLivenessSession = useCallback(async () => {
+        setLivenessPhase('loading');
+        setLivenessError('');
+        try {
+            const token = JSON.parse(localStorage.getItem('userInfo') || '{}')?.token;
+            // Create session and fetch credentials in parallel
+            const [sessionRes, credRes] = await Promise.all([
+                fetch(`${LIVENESS_API}/api/liveness/create-session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                }),
+                fetch(`${LIVENESS_API}/api/liveness/credentials`, {
+                    method: 'GET',
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+            ]);
+            const sessionData = await sessionRes.json();
+            if (!sessionRes.ok) throw new Error(sessionData.message || 'Failed to create session');
 
-        setTimeout(() => {
-            const imageSrc = webcamRef.current.getScreenshot();
-            setKycImage(imageSrc);
-            setLoading(false);
-            setBlinkInstruction(false);
-            toast.success('Liveliness confirmed', { id: tid });
-            setCurrentStep(5);
-        }, 3000);
-    };
+            if (credRes.ok) {
+                const credData = await credRes.json();
+                setLivenessCredentials(credData.credentials);
+            }
+
+            setLivenessSessionId(sessionData.sessionId);
+            setLivenessPhase('detecting');
+        } catch (e) {
+            setLivenessError(e.message);
+            setLivenessPhase('error');
+        }
+    }, []);
+
+    const handleLivenessComplete = useCallback(async () => {
+        setLivenessPhase('loading');
+        const tid = toast.loading('Verifying biometric markers...');
+        try {
+            const token = JSON.parse(localStorage.getItem('userInfo') || '{}')?.token;
+            const res = await fetch(`${LIVENESS_API}/api/liveness/verify-session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ sessionId: livenessSessionId }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Verification failed');
+
+            if (data.success) {
+                toast.success(`Liveness confirmed (${data.riskLevel})`, { id: tid });
+                setLivenessPhase('done');
+                setCurrentStep(5);
+            } else {
+                toast.error(`Check failed: ${data.riskLevel} (score ${data.confidenceScore?.toFixed(1)})`, { id: tid });
+                setLivenessPhase('idle'); // allow retry
+                setLivenessSessionId(null);
+            }
+        } catch (e) {
+            toast.error(e.message, { id: tid });
+            setLivenessPhase('error');
+            setLivenessError(e.message);
+        }
+    }, [livenessSessionId]);
+
+    const handleLivenessError = useCallback((err) => {
+        console.error('[Liveness]', err);
+        setLivenessError(err?.message || 'Camera or network error');
+        setLivenessPhase('idle');
+        setLivenessSessionId(null);
+    }, []);
 
     // No auto-progression from wallet to mint anymore to prevent "bypassing"
     const handleWalletConnectionProceed = () => {
@@ -198,8 +280,11 @@ const Onboarding = () => {
             localStorage.setItem("userRole", role || userProfile?.role);
 
             toast.loading('Finalizing protocol synchronization...', { id: tid });
-            await submitKyc('Aadhaar', aadhaar, kycImage, address, result.txHash || 'existing');
+            await submitKyc('Aadhaar', aadhaar, null, address, result.txHash || 'existing');
 
+            // Clear persisted onboarding state on successful completion
+            sessionStorage.removeItem(stepKey);
+            sessionStorage.removeItem(aadhaarKey);
             setCurrentStep(7);
         } catch (err) {
             console.error("Mint error:", err);
@@ -305,22 +390,56 @@ const Onboarding = () => {
                         </motion.div>
                     )}
 
-                    {/* LIVELINESS */}
+                    {/* LIVELINESS — AWS Rekognition */}
                     {currentStep === 4 && (
                         <motion.div key="s4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center">
                             <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter italic">Biometric Liveliness</h2>
-                            <p className="text-sm md:text-base text-slate-500 font-medium mb-10 md:mb-12">Confirm your presence to anchor your identity on-chain.</p>
-                            <div className="relative w-64 h-64 md:w-72 md:h-72 mx-auto rounded-[3.5rem] overflow-hidden border-4 border-slate-900 bg-slate-950 mb-10 md:mb-12 shadow-2xl">
-                                <Webcam audio={false} ref={webcamRef} screenshotFormat="image/jpeg" className="w-full h-full object-cover grayscale brightness-110" />
-                                {loading && (
-                                    <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-8">
-                                        <FiLoader className="text-blue-600 animate-spin mb-4" size={40} />
-                                        <p className="text-white font-black text-xl md:text-2xl uppercase tracking-tighter animate-pulse">{blinkInstruction ? 'Blink Twice' : 'Processing...'}</p>
+                            <p className="text-sm md:text-base text-slate-500 font-medium mb-8">Confirm your presence to anchor your identity on-chain.</p>
+
+                            {/* Idle — show start button */}
+                            {livenessPhase === 'idle' && (
+                                <div className="flex flex-col items-center gap-6">
+                                    <div className="w-24 h-24 bg-blue-600/10 text-blue-500 rounded-full flex items-center justify-center">
+                                        <FiCamera size={48} />
                                     </div>
-                                )}
-                            </div>
-                            {!loading && (
-                                <button onClick={performLiveliness} className="btn-primary !px-12 !py-5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-xl">Start Biometric Scan</button>
+                                    <p className="text-slate-400 text-sm max-w-sm">AWS will prompt you to move your face into an oval. The check takes about 5 seconds.</p>
+                                    <button onClick={startLivenessSession} className="btn-primary !px-12 !py-5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] shadow-xl">
+                                        Start Liveness Check
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Loading — creating session */}
+                            {livenessPhase === 'loading' && (
+                                <div className="flex flex-col items-center gap-4 py-8">
+                                    <FiLoader className="text-blue-500 animate-spin" size={48} />
+                                    <p className="text-slate-400 text-sm animate-pulse">Initialising secure session…</p>
+                                </div>
+                            )}
+
+                            {/* Detecting — AWS component */}
+                            {livenessPhase === 'detecting' && livenessSessionId && (
+                                <div className="mx-auto w-full max-w-xl liveness-dark-wrapper">
+                                    <FaceLivenessDetector
+                                        key={livenessSessionId}
+                                        sessionId={livenessSessionId}
+                                        region={import.meta.env.VITE_AWS_REGION || 'us-east-1'}
+                                        onAnalysisComplete={handleLivenessComplete}
+                                        onError={handleLivenessError}
+                                        displayText={{ hintMoveFaceToOvalText: 'Move face into the oval' }}
+                                        {...(livenessCredentials ? { credentialProvider: async () => livenessCredentials } : {})}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Error — retry */}
+                            {livenessPhase === 'error' && (
+                                <div className="flex flex-col items-center gap-4 py-8">
+                                    <p className="text-red-400 font-semibold">{livenessError || 'Something went wrong'}</p>
+                                    <button onClick={startLivenessSession} className="btn-primary !px-10 !py-4 text-xs font-black uppercase tracking-widest">
+                                        Retry
+                                    </button>
+                                </div>
                             )}
                         </motion.div>
                     )}

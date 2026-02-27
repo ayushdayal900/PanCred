@@ -92,7 +92,16 @@ const Signup = () => {
             const result = await register(name, email, password);
             if (result.success) {
                 toast.success('Identity Created! Opening gateway...', { id: tid });
-                navigate('/onboarding');
+
+                // If they registered with an email that already had a complete profile
+                const profile = result.user;
+                if (profile?.kycStatus === 'Verified') {
+                    localStorage.setItem("isOnboarded", "true");
+                    navigate('/dashboard');
+                } else {
+                    localStorage.removeItem("isOnboarded");
+                    navigate('/onboarding');
+                }
             } else {
                 toast.error(result.message, { id: tid });
             }

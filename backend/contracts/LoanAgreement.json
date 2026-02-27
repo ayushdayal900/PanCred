@@ -2,6 +2,16 @@
   {
     "inputs": [
       {
+        "internalType": "enum LoanAgreement.LoanMode",
+        "name": "_mode",
+        "type": "uint8"
+      },
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      },
+      {
         "internalType": "address",
         "name": "_borrower",
         "type": "address"
@@ -35,11 +45,6 @@
         "internalType": "uint256",
         "name": "_insuranceFee",
         "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "_token",
-        "type": "address"
       },
       {
         "internalType": "address",
@@ -303,6 +308,19 @@
   },
   {
     "inputs": [],
+    "name": "getLoanMode",
+    "outputs": [
+      {
+        "internalType": "enum LoanAgreement.LoanMode",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "getLoanStatus",
     "outputs": [
       {
@@ -447,6 +465,19 @@
   },
   {
     "inputs": [],
+    "name": "loanMode",
+    "outputs": [
+      {
+        "internalType": "enum LoanAgreement.LoanMode",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "missedPayments",
     "outputs": [
       {
@@ -519,6 +550,13 @@
   },
   {
     "inputs": [],
+    "name": "repayETH",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "repayInstallment",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -529,7 +567,7 @@
     "name": "token",
     "outputs": [
       {
-        "internalType": "contract IERC20",
+        "internalType": "address",
         "name": "",
         "type": "address"
       }

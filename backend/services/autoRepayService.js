@@ -31,6 +31,7 @@ const nodemailer = require('nodemailer');
 const LoanRequest = require('../models/LoanRequest');
 const User = require('../models/User');
 const TrustScoreHistory = require('../models/TrustScoreHistory');
+const trustScore = require('./trustScoreService');
 
 // ── ABI & Addresses ───────────────────────────────────────────────────────────
 const ADDRESSES_PATH = path.join(__dirname, '../contracts/addresses.json');
@@ -82,33 +83,9 @@ async function sendEmail(to, subject, html) {
     }
 }
 
-// ── Trust Score Helper ────────────────────────────────────────────────────────
-async function applyTrustScore(userId, change, reason, loanId, metadata = {}) {
-    try {
-        const user = await User.findById(userId);
-        if (!user) return;
-
-        const prev = user.trustScore || 0;
-        const newScore = Math.max(0, Math.min(1000, prev + change));
-        user.trustScore = newScore;
-        await user.save();
-
-        await TrustScoreHistory.create({
-            user: userId,
-            changeAmount: change,
-            previousScore: prev,
-            newScore,
-            reason,
-            associatedLoan: loanId || null,
-            metadata
-        });
-        console.log(`[AutoRepay] 📊  TrustScore ${userId}: ${prev} → ${newScore} (${reason})`);
-    } catch (err) {
-        console.warn('[AutoRepay] ⚠️   TrustScore update failed:', err.message);
-    }
-}
 
 // ── Core: process one agreement ───────────────────────────────────────────────
+
 async function processAgreement(loanDoc, agreementAddress) {
     const tag = `[AutoRepay][${agreementAddress.slice(0, 8)}]`;
 
@@ -150,9 +127,18 @@ async function processAgreement(loanDoc, agreementAddress) {
         if (loanDoc.status !== 'Defaulted') {
             loanDoc.status = 'Defaulted';
             await loanDoc.save();
+            // Apply -150 for loan default (one-time, only when first transitioning to Defaulted)
+            if (loanDoc.borrower) {
+                try {
+                    await trustScore.decreaseScore(loanDoc.borrower, 150, trustScore.ACTIONS.LOAN_DEFAULTED);
+                } catch (tsErr) {
+                    console.warn('[AutoRepay] ⚠️   TrustScore default penalty failed:', tsErr.message);
+                }
+            }
         }
         return;
     }
+
 
     const {
         _paymentsMade,
@@ -195,10 +181,11 @@ async function processAgreement(loanDoc, agreementAddress) {
 
         // Penalise trust score off-chain
         if (loanDoc.borrower) {
-            await applyTrustScore(loanDoc.borrower, -50, 'Defaulted', loanDoc._id, {
-                agreementAddress,
-                reason: 'Insufficient token allowance for automation'
-            });
+            try {
+                await trustScore.decreaseScore(loanDoc.borrower, 50, trustScore.ACTIONS.INSTALLMENT_MISSED);
+            } catch (err) {
+                console.warn('[AutoRepay] ⚠️   TrustScore decrease failed:', err.message);
+            }
         }
 
         // Notify borrower by email
@@ -263,14 +250,34 @@ async function processAgreement(loanDoc, agreementAddress) {
 
         // 7. Reward trust score
         if (loanDoc.borrower) {
-            const isFirst = Number(_paymentsMade) === 0;
-            await applyTrustScore(
-                loanDoc.borrower,
-                isFirst ? 100 : 75,
-                'Successful Repayment',
-                loanDoc._id,
-                { txHash: tx.hash, agreementAddress, installmentNumber: Number(_paymentsMade) + 1 }
-            );
+            try {
+                const isFirstInstallment = !loanDoc.firstInstallmentRewarded;
+
+                if (isFirstInstallment) {
+                    // +50 first-installment bonus (idempotent per-loan guard)
+                    await trustScore.increaseScore(loanDoc.borrower, 50, trustScore.ACTIONS.FIRST_INSTALLMENT);
+                    loanDoc.firstInstallmentRewarded = true;
+                    await loanDoc.save();
+                } else {
+                    // +20 for each subsequent installment
+                    await trustScore.increaseScore(loanDoc.borrower, 20, trustScore.ACTIONS.INSTALLMENT_PAID);
+                }
+
+                // If this was the FINAL payment, handle completedLoans + milestone bonus
+                if (Number(_remainingPayments) === 1) {
+                    const borrowerUser = await User.findById(loanDoc.borrower);
+                    if (borrowerUser) {
+                        if (borrowerUser.completedLoans === 0) {
+                            await trustScore.increaseScore(loanDoc.borrower, 100, trustScore.ACTIONS.FIRST_LOAN_COMPLETED);
+                        }
+                        borrowerUser.completedLoans = (borrowerUser.completedLoans ?? 0) + 1;
+                        await borrowerUser.save();
+                        console.log(`[AutoRepay] 🏆  completedLoans → ${borrowerUser.completedLoans} for ${loanDoc.borrower}`);
+                    }
+                }
+            } catch (tsErr) {
+                console.warn('[AutoRepay] ⚠️   TrustScore reward failed:', tsErr.message);
+            }
         }
 
         // 8. Success email
@@ -301,10 +308,11 @@ async function processAgreement(loanDoc, agreementAddress) {
 
         // Penalise trust score
         if (loanDoc.borrower) {
-            await applyTrustScore(loanDoc.borrower, -50, 'Defaulted', loanDoc._id, {
-                agreementAddress,
-                error: reason
-            });
+            try {
+                await trustScore.decreaseScore(loanDoc.borrower, 50, trustScore.ACTIONS.INSTALLMENT_MISSED);
+            } catch (tsErr) {
+                console.warn('[AutoRepay] ⚠️   TrustScore decrease failed:', tsErr.message);
+            }
         }
 
         // Failure email

@@ -45,8 +45,31 @@ const userSchema = new mongoose.Schema({
     },
     trustScore: {
         type: Number,
-        default: 0, // 0-1000 scale, updated by simulated ML model/repayments
+        default: 300,
+        min: 300,
+        max: 900
     },
+    completedLoans: {
+        type: Number,
+        default: 0
+    },
+    hasReceivedFirstInstallmentBonus: {
+        type: Boolean,
+        default: false
+    },
+    hasReceivedFirstFullRepaymentBonus: {
+        type: Boolean,
+        default: false
+    },
+    trustHistory: [{
+        action: String,
+        points: Number,
+        newScore: Number,
+        timestamp: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     hasClaimedFaucet: {
         type: Boolean,
         default: false

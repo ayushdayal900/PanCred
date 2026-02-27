@@ -87,6 +87,12 @@
         "internalType": "uint256",
         "name": "durationInMonths",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "enum LoanAgreement.LoanMode",
+        "name": "mode",
+        "type": "uint8"
       }
     ],
     "name": "LoanRequested",
@@ -193,6 +199,34 @@
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "principal",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalRepayment",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "durationInMonths",
+        "type": "uint256"
+      },
+      {
+        "internalType": "enum LoanAgreement.LoanMode",
+        "name": "mode",
+        "type": "uint8"
+      }
+    ],
+    "name": "createLoanRequestWithMode",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
         "name": "requestId",
         "type": "uint256"
       }
@@ -242,6 +276,11 @@
             "internalType": "address",
             "name": "agreementAddress",
             "type": "address"
+          },
+          {
+            "internalType": "enum LoanAgreement.LoanMode",
+            "name": "mode",
+            "type": "uint8"
           }
         ],
         "internalType": "struct LoanAgreementFactory.LoanRequest[]",
@@ -390,6 +429,11 @@
         "internalType": "address",
         "name": "agreementAddress",
         "type": "address"
+      },
+      {
+        "internalType": "enum LoanAgreement.LoanMode",
+        "name": "mode",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
