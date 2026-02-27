@@ -1,6 +1,6 @@
-# Aamba SupportBot Integration Guide
+# PanCred SupportBot Integration Guide
 
-This guide documents the architecture, dependencies, and integration steps for the **Aamba SupportBot**, an AI-powered microfinance assistant capable of multilingual conversational support (including Hinglish) and structured loan data extraction.
+This guide documents the architecture, dependencies, and integration steps for the **PanCred SupportBot**, an AI-powered microfinance assistant capable of multilingual conversational support (including Hinglish) and structured loan data extraction.
 
 ## 1. Overview
 The SupportBot is a full-stack feature. It provides a floating chat bubble on the bottom-right of the screen globally across the application. It leverages the Groq API with the `llama-3.3-70b-versatile` model to process natural language, assist users, and intentionally extract JSON for structured actions like creating a loan.

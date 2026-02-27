@@ -73,7 +73,7 @@ const RoleSelector = ({ onSelect }) => {
                     Select Your Protocol Role
                 </h1>
                 <p className="text-slate-500 font-medium text-sm md:text-base leading-relaxed">
-                    Choose how you want to participate in the AAMBA microfinance protocol. This sets up your dashboard.
+                    Choose how you want to participate in the PanCred microfinance protocol. This sets up your dashboard.
                 </p>
             </div>
 

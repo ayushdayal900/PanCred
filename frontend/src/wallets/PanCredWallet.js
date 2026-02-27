@@ -1,14 +1,14 @@
 import { injected } from 'wagmi/connectors';
 import { createConnector } from 'wagmi';
 
-export const aambaWallet = () => ({
-    id: 'aamba-custom-wallet',
-    name: 'Aamba Smart Wallet',
-    iconUrl: 'https://ui-avatars.com/api/?name=Aamba&background=3b82f6&color=fff',
+export const PanCredWallet = () => ({
+    id: 'PanCred-custom-wallet',
+    name: 'PanCred Smart Wallet',
+    iconUrl: 'https://ui-avatars.com/api/?name=PanCred&background=3b82f6&color=fff',
     iconBackground: '#3b82f6',
     // Change to true once you have built your custom browser extension 
     // that injects `window.aamba` into the browser DOM
-    installed: typeof window !== 'undefined' && typeof window.aamba !== 'undefined',
+    installed: typeof window !== 'undefined' && typeof window.PanCred !== 'undefined',
     downloadUrls: {
         chrome: 'https://chrome.google.com/webstore/detail/your-custom-wallet',
         browserExtension: 'https://your-custom-wallet.com'
@@ -18,7 +18,7 @@ export const aambaWallet = () => ({
             learnMoreUrl: 'https://your-custom-wallet.com/learn-more',
             steps: [
                 {
-                    description: 'Install the Aamba Smart Wallet extension to interact with our protocol smart contracts.',
+                    description: 'Install the PanCred Smart Wallet extension to interact with our protocol smart contracts.',
                     step: 'install',
                     title: 'Install Extension',
                 },
@@ -37,9 +37,9 @@ export const aambaWallet = () => ({
         return createConnector((config) => ({
             ...injected({
                 target: isOurWalletInstalled ? {
-                    id: 'aambaProvider',
-                    name: 'Aamba Smart Wallet',
-                    provider: window.aamba
+                    id: 'PanCredProvider',
+                    name: 'PanCred Smart Wallet',
+                    provider: window.PanCred
                 } : 'metaMask', // Fallback to standard injected provider for development testing
             })(config),
             ...walletDetails,

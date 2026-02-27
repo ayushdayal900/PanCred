@@ -23,7 +23,7 @@ if (typeof window !== 'undefined') {
   window.Buffer = window.Buffer || Buffer;
 }
 
-import { aambaWallet } from './wallets/aambaWallet';
+import { PanCredWallet } from './wallets/PanCredWallet';
 import { injectedWallet, metaMaskWallet, walletConnectWallet } from '@rainbow-me/rainbowkit/wallets';
 
 // ── AWS Amplify (for Face Liveness guest credentials) ──────────────────────
@@ -46,8 +46,8 @@ const config = getDefaultConfig({
 
   wallets: [
     {
-      groupName: 'Microfinance Smart Contract Wallets',
-      wallets: [aambaWallet],
+      groupName: 'PanCred Smart Contract Wallets',
+      wallets: [PanCredWallet],
     },
     {
       groupName: 'Other Providers',

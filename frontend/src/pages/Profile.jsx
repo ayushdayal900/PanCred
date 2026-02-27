@@ -74,7 +74,7 @@ const Profile = () => {
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
                     <h1 className="text-3xl md:text-4xl font-black text-white italic tracking-tighter">Protocol Identity</h1>
-                    <p className="text-sm md:text-base text-slate-500 font-medium">Your decentralized reputation across the Aamba network.</p>
+                    <p className="text-sm md:text-base text-slate-500 font-medium">Your decentralized reputation across the PanCred network.</p>
                 </div>
                 <div className="w-full md:w-auto bg-fintech-surface border border-fintech-border p-5 md:px-6 md:py-4 rounded-[2rem] flex items-center justify-between md:justify-start gap-6 shadow-xl">
                     <div className="md:text-right">
@@ -162,7 +162,7 @@ const Profile = () => {
                         <div className={`w-24 h-24 md:w-32 md:h-32 mx-auto mb-8 rounded-[2.5rem] flex items-center justify-center border-2 transition-all duration-1000 ${hasNft ? 'bg-blue-600/5 border-blue-600/30 text-blue-500 shadow-2xl' : 'bg-slate-950 border-slate-900 text-slate-800'}`}>
                             <FiShield size={hasNft ? 56 : 48} className={hasNft ? 'drop-shadow-md' : ''} />
                         </div>
-                        <h4 className="text-2xl font-black text-white mb-2 italic tracking-tighter">AAMBA ID</h4>
+                        <h4 className="text-2xl font-black text-white mb-2 italic tracking-tighter">PanCred ID</h4>
                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-10">Protocol Soulbound NFT</p>
 
                         <div className="flex justify-center mb-10">

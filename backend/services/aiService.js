@@ -12,7 +12,7 @@ function getGroq() {
 }
 
 // System prompt defining the chatbot's roles and instructions for structured data
-const SYSTEM_PROMPT = `You are a microfinance support assistant, a loan guide, a multilingual assistant, and a structured loan data extractor for Aamba.
+const SYSTEM_PROMPT = `You are a microfinance support assistant, a loan guide, a multilingual assistant, and a structured loan data extractor for PanCred.
 
 Your REQUIRED knowledge base includes answering questions about:
 1. The KYC process.

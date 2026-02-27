@@ -32,7 +32,7 @@ router.post('/send-otp', async (req, res) => {
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
-        subject: 'Aamba Protocol - Your Verification OTP',
+        subject: 'PanCred Protocol - Your Verification OTP',
         text: `Your 6-digit verification code is: ${otp}. This code will expire in 5 minutes.`
     };
 

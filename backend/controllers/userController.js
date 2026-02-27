@@ -76,7 +76,7 @@ exports.walletLogin = async (req, res) => {
             // In a real app, we'd signed a message
             user = await User.create({
                 name: `User ${walletAddress.slice(0, 6)}`,
-                email: `${walletAddress.toLowerCase()}@aamba.io`,
+                email: `${walletAddress.toLowerCase()}@PanCred.io`,
                 password: await bcrypt.hash(Math.random().toString(36), 10),
                 walletAddress: walletAddress.toLowerCase(),
                 role: 'Unassigned',
@@ -383,7 +383,7 @@ exports.submitKYC = async (req, res) => {
                             </div>
                         </div>
                         <div style="background: #edf2f7; padding: 20px 32px; text-align: center;">
-                            <p style="margin: 0; color: #a0aec0; font-size: 12px;">© 2025 PanCred · Powered by the Aamba Protocol · This email was sent to ${user.email}</p>
+                            <p style="margin: 0; color: #a0aec0; font-size: 12px;">© 2025 PanCred · Powered by the PanCred Protocol · This email was sent to ${user.email}</p>
                         </div>
                     </div>
                 `

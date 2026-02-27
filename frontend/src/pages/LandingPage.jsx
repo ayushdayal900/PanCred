@@ -191,7 +191,7 @@ const LandingPage = () => {
                     <div className="global-container">
                         <div className="text-center mb-16 md:mb-24">
                             <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px] md:text-[10px] mb-4">End-to-End Protocol Flow</p>
-                            <h2 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">How Aamba Works</h2>
+                            <h2 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">How PanCred Works</h2>
                         </div>
 
                         <div className="relative">
@@ -226,7 +226,7 @@ const LandingPage = () => {
                     <div className="global-container">
                         <div className="text-center mb-16 md:mb-24">
                             <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-[9px] md:text-[10px] mb-4">Protocol Architecture</p>
-                            <h2 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">The Pillars of Aamba</h2>
+                            <h2 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">The Pillars of PanCred</h2>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
@@ -310,14 +310,14 @@ const LandingPage = () => {
                         <div className="w-10 h-10 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center">
                             <FiShield className="text-white text-base" />
                         </div>
-                        <span className="text-xl font-black text-white tracking-widest uppercase">AAMBA</span>
+                        <span className="text-xl font-black text-white tracking-widest uppercase">PanCred</span>
                     </div>
                     <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 mb-8 md:mb-10">
                         <a href="#" className="hover:text-blue-500 transition-colors">Whitepaper</a>
                         <a href="#" className="hover:text-blue-500 transition-colors">Protocol Status</a>
                         <a href="#" className="hover:text-blue-500 transition-colors">Privacy</a>
                     </div>
-                    <p className="text-slate-700 text-[9px] md:text-[10px] font-medium uppercase tracking-[0.2em] max-w-xs mx-auto md:max-w-none">© 2026 Aamba Finance. Build with conviction.</p>
+                    <p className="text-slate-700 text-[9px] md:text-[10px] font-medium uppercase tracking-[0.2em] max-w-xs mx-auto md:max-w-none">© 2026 PanCred Finance. Build with conviction.</p>
                 </div>
             </footer>
         </div>

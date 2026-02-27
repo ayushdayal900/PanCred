@@ -15,7 +15,7 @@ const Layout = ({ children }) => {
                     <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                         <span className="text-white font-black italic text-xs">A</span>
                     </div>
-                    <span className="text-sm font-black text-white tracking-widest uppercase">Aamba</span>
+                    <span className="text-sm font-black text-white tracking-widest uppercase">PanCred</span>
                 </div>
                 <button
                     onClick={toggleMobileMenu}

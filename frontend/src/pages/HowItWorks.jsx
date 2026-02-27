@@ -156,7 +156,7 @@ const HowItWorks = () => {
             {/* Header */}
             <div className="text-center space-y-4 pt-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600">Protocol Documentation</p>
-                <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter">How Aamba Works</h1>
+                <h1 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter">How PanCred Works</h1>
                 <p className="text-slate-400 max-w-2xl mx-auto text-sm leading-relaxed font-medium">
                     A complete walkthrough of every layer — from identity verification to on-chain repayments and dynamic insurance — built and deployed on Ethereum Sepolia.
                 </p>

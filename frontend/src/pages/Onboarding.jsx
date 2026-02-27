@@ -351,7 +351,7 @@ const Onboarding = () => {
                     {currentStep === 2 && (
                         <motion.div key="s2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="text-center">
                             <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tighter italic">Primary Access Role</h2>
-                            <p className="text-sm md:text-base text-slate-500 font-medium mb-10 md:mb-12">How will you participate in the Aamba protocol?</p>
+                            <p className="text-sm md:text-base text-slate-500 font-medium mb-10 md:mb-12">How will you participate in the PanCred protocol?</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 text-left">
                                 <button onClick={() => handleRoleSelect('Lender')} className="group p-8 md:p-10 bg-slate-900/50 border border-slate-800 rounded-[2.5rem] hover:border-blue-600 transition-all">
                                     <div className="w-12 h-12 md:w-14 md:h-14 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><FiBriefcase size={28} /></div>
@@ -479,7 +479,7 @@ const Onboarding = () => {
                                 <div className="absolute inset-0 bg-blue-600/10 blur-3xl pointer-events-none"></div>
                                 <div className="relative bg-slate-950 border-2 border-blue-600/30 p-8 md:p-12 rounded-[4rem] aspect-square flex flex-col items-center justify-center shadow-2xl">
                                     <FiShield size={80} className="md:w-24 md:h-24 text-blue-600 mb-6 drop-shadow-md" />
-                                    <h4 className="font-black text-xl md:text-2xl text-white italic tracking-tighter">AAMBA ID</h4>
+                                    <h4 className="font-black text-xl md:text-2xl text-white italic tracking-tighter">PanCred ID</h4>
                                     <p className="text-[8px] md:text-[9px] text-slate-600 font-mono mt-4 truncate w-full">{address}</p>
                                     {txnHash && (
                                         <div className="mt-8 p-4 bg-slate-900 rounded-2xl border border-slate-800 w-full text-left">
@@ -532,7 +532,7 @@ const Onboarding = () => {
                         <motion.div key="s7" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-6 md:py-10">
                             <div className="w-20 h-20 md:w-24 md:h-24 bg-blue-600/10 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-8 md:mb-10 shadow-lg shadow-blue-600/10"><FiCheckCircle size={40} className="md:w-12 md:h-12" /></div>
                             <h2 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter italic">Authorization Complete.</h2>
-                            <p className="text-sm md:text-base text-slate-500 max-w-md mx-auto mb-10 md:mb-12 font-medium">Your decentralized identity is now recognized by the Aamba protocol.</p>
+                            <p className="text-sm md:text-base text-slate-500 max-w-md mx-auto mb-10 md:mb-12 font-medium">Your decentralized identity is now recognized by the PanCred protocol.</p>
                             <button onClick={() => navigate('/dashboard')} className="w-full bg-white text-black font-black py-5 md:py-6 rounded-2xl hover:bg-slate-200 transition-all shadow-xl flex items-center justify-center gap-4 text-base md:text-lg uppercase tracking-widest">Enter Protocol Terminal <FiArrowRight size={24} /></button>
                         </motion.div>
                     )}

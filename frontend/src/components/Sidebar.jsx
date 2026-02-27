@@ -35,7 +35,7 @@ const Sidebar = ({ onClose }) => {
                         <FiShield className="text-white text-xl" />
                     </div>
                     <div>
-                        <h1 className="text-xl font-black text-white leading-none">AAMBA</h1>
+                        <h1 className="text-xl font-black text-white leading-none">PanCred</h1>
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Microfinance</p>
                     </div>
                 </div>

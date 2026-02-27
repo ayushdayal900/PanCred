@@ -23,7 +23,7 @@ const Navbar = () => {
                         <span className="text-white font-black italic text-lg transition-transform hover:scale-110">A</span>
                     </div>
                     <Link to="/" className="text-2xl font-black text-white tracking-widest uppercase">
-                        Aamba
+                        PanCred
                     </Link>
                 </div>
 
