@@ -21,6 +21,12 @@ contract LoanAgreementFactory {
     // --- Config ---
     address public immutable identityContract;
     address public immutable treasury;
+    /// @dev ERC-20 token used for installment repayments (e.g. MockUSDT / tUSDT).
+    address public immutable repaymentToken;
+    /// @dev Backend automation service wallet passed to every LoanAgreement it deploys.
+    address public immutable automationService;
+    /// @dev TrustScoreRegistry — each deployed LoanAgreement is authorized to call penalize().
+    ITrustScoreRegistry public immutable trustScoreRegistry;
 
     /// @dev Insurance fee = 1% of totalRepayment (100 basis points)
     uint256 public constant INSURANCE_BPS = 100; // 1% in basis points (out of 10_000)
@@ -69,11 +75,23 @@ contract LoanAgreementFactory {
     }
 
     // --- Constructor ---
-    constructor(address _identityContract, address _treasury) {
-        require(_identityContract != address(0), "Zero identity address");
-        require(_treasury != address(0), "Zero treasury address");
-        identityContract = _identityContract;
-        treasury = _treasury;
+    constructor(
+        address _identityContract,
+        address _treasury,
+        address _repaymentToken,
+        address _automationService,
+        address _trustScoreRegistry
+    ) {
+        require(_identityContract   != address(0), "Zero identity address");
+        require(_treasury           != address(0), "Zero treasury address");
+        require(_repaymentToken     != address(0), "Zero token address");
+        require(_automationService  != address(0), "Zero automation service");
+        require(_trustScoreRegistry != address(0), "Zero trust registry");
+        identityContract   = _identityContract;
+        treasury           = _treasury;
+        repaymentToken     = _repaymentToken;
+        automationService  = _automationService;
+        trustScoreRegistry = ITrustScoreRegistry(_trustScoreRegistry);
     }
 
     // --- Core Functions ---
@@ -132,11 +150,25 @@ contract LoanAgreementFactory {
             request.totalRepayment,
             request.durationInMonths,
             treasury,
-            INSURANCE_BPS * request.totalRepayment / 10_000  // 1% of totalRepayment, dynamic
+            INSURANCE_BPS * request.totalRepayment / 10_000,
+            repaymentToken,
+            automationService,
+            address(trustScoreRegistry)
         );
 
         address agreementAddr = address(agreement);
         request.agreementAddress = agreementAddr;
+
+        // Grant this specific LoanAgreement contract permission to call
+        // trustScoreRegistry.penalize() so on-chain trust penalties can fire
+        // directly from the contract when a borrower's payment fails.
+        // Wrapped in try/catch: succeeds if factory is owner/authorized on the
+        // registry; silently skips otherwise (backend handles penalty as fallback).
+        try trustScoreRegistry.setAuthorized(agreementAddr, true) {
+            // LoanAgreement can now penalize on-chain
+        } catch {
+            // Factory not authorized on TrustScoreRegistry \u2014 backend cron handles penalties
+        }
 
         borrowerAgreements[request.borrower].push(agreementAddr);
         lenderAgreements[msg.sender].push(agreementAddr);

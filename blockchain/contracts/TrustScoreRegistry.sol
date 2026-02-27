@@ -74,6 +74,19 @@ contract TrustScoreRegistry is Ownable {
     }
 
     /**
+     * @dev Penalises a user's trust score by a fixed amount.
+     *      Used by LoanAgreement contracts (granted via setAuthorized) when a
+     *      repayment fails due to insufficient balance or allowance.
+     * @param user   The address of the delinquent borrower.
+     * @param amount Score points to subtract (floored at 0 — never goes negative).
+     */
+    function penalize(address user, uint256 amount) external onlyAuthorized {
+        uint256 current  = _trustScores[user];
+        uint256 newScore = current > amount ? current - amount : 0;
+        updateTrustScore(user, newScore);
+    }
+
+    /**
      * @dev Retrieves the current trust score for a user.
      * @param user The address of the user.
      * @return The current trust score.

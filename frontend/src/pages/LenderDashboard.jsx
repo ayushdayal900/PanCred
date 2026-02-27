@@ -86,9 +86,11 @@ const LenderDashboard = () => {
                         paymentsMade: Number(status._paymentsMade),
                         totalDuration: Number(status._totalDuration),
                         nextDueTimestamp: Number(status._nextDueTimestamp),
-                        monthlyPayment: ethers.formatEther(status._monthlyPayment),
+                        monthlyPayment: ethers.formatUnits(status._monthlyPayment, 6),
                         remainingPayments: Number(status._remainingPayments),
                         completed: status._completed,
+                        missedPayments: Number(status._missedPayments),
+                        isOverdue: status._isOverdue,
                     };
                 } catch (e) {
                     console.error('[LenderDashboard] Failed to read agreement:', addr, e);
@@ -106,6 +108,38 @@ const LenderDashboard = () => {
     useEffect(() => {
         if (walletAddress) fetchLenderAgreements();
     }, [walletAddress, walletClient]);
+
+    // Listen to Agreement Events (Lender View)
+    useEffect(() => {
+        if (!lenderAgreements.length || !walletClient) return;
+        const provider = new ethers.BrowserProvider(walletClient.transport);
+        const activeListeners = [];
+
+        lenderAgreements.forEach(agr => {
+            const contract = new ethers.Contract(agr.address, agreementAbi, provider);
+
+            const onPaid = (_, installmentNumber, amountPaid) => {
+                toast.success(`Installment #${installmentNumber} received!`);
+                fetchLenderAgreements();
+            };
+
+            const onMissed = (_, cyclesMissed, paymentFailed) => {
+                toast.error(`Borrower missed an installment! Penalty triggered.`);
+                fetchLenderAgreements();
+            };
+
+            contract.on("InstallmentPaid", onPaid);
+            contract.on("InstallmentMissed", onMissed);
+            activeListeners.push({ contract, onPaid, onMissed });
+        });
+
+        return () => {
+            activeListeners.forEach(({ contract, onPaid, onMissed }) => {
+                contract.off("InstallmentPaid", onPaid);
+                contract.off("InstallmentMissed", onMissed);
+            });
+        };
+    }, [lenderAgreements.map(a => a.address).join(','), walletClient]);
 
 
 
@@ -385,8 +419,8 @@ const LenderDashboard = () => {
                                             <p className="text-[9px] font-mono text-slate-500 font-black uppercase tracking-wider">Agreement</p>
                                             <p className="text-xs font-mono text-slate-400 mt-1">{agr.address.slice(0, 10)}...{agr.address.slice(-6)}</p>
                                         </div>
-                                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${agr.completed ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                                            {agr.completed ? 'Completed' : 'Active'}
+                                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${agr.completed ? 'bg-emerald-500/10 text-emerald-500' : agr.isOverdue ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                            {agr.completed ? 'Completed' : agr.isOverdue ? 'Borrower Overdue' : 'Active'}
                                         </span>
                                     </div>
 
@@ -396,29 +430,33 @@ const LenderDashboard = () => {
                                                 <FiDollarSign size={11} className="text-emerald-500" />
                                                 <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Received So Far</p>
                                             </div>
-                                            <p className="text-emerald-400 font-black italic text-lg">{paidSoFar} ETH</p>
+                                            <p className="text-emerald-400 font-black italic text-lg">{paidSoFar} <span className="text-slate-500 text-sm font-normal not-italic">tUSDT</span></p>
                                         </div>
                                         <div className="bg-slate-950/50 rounded-xl p-4">
                                             <div className="flex items-center gap-2 mb-1">
                                                 <FiTrendingUp size={11} className="text-blue-500" />
                                                 <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Total Expected</p>
                                             </div>
-                                            <p className="text-white font-black italic text-lg">{totalExpected} ETH</p>
+                                            <p className="text-white font-black italic text-lg">{totalExpected} <span className="text-slate-500 text-sm font-normal not-italic">tUSDT</span></p>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-3 gap-3 mb-6 bg-slate-950/50 rounded-xl p-3 text-center">
+                                    <div className="grid grid-cols-4 gap-2 mb-6 bg-slate-950/50 rounded-xl p-3 text-center">
                                         <div>
                                             <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Received</p>
                                             <p className="text-white font-black">{agr.paymentsMade}/{agr.totalDuration}</p>
                                         </div>
                                         <div className="border-x border-slate-900">
                                             <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Monthly</p>
-                                            <p className="text-emerald-400 font-black text-[11px]">{agr.monthlyPayment} ETH</p>
+                                            <p className="text-emerald-400 font-black text-[11px]">{agr.monthlyPayment} tUSDT</p>
                                         </div>
-                                        <div>
+                                        <div className="border-r border-slate-900">
                                             <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Remaining</p>
                                             <p className="text-blue-400 font-black">{agr.remainingPayments}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Missed</p>
+                                            <p className="text-red-400 font-black">{agr.missedPayments}</p>
                                         </div>
                                     </div>
 

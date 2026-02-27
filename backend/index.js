@@ -13,10 +13,14 @@ const loanRoutes = require('./routes/loanRoutes');
 const authRoutes = require('./routes/authRoutes');
 const port = process.env.PORT || 5000;
 const { connectProvider, listenToContractEvents } = require('./services/blockchainService');
+const { startAutoRepayScheduler } = require('./services/autoRepayService');
 
 // Initialize Blockchain Service
 connectProvider();
 listenToContractEvents();
+
+// Initialize Automatic Repayment Cron (every 60 seconds)
+startAutoRepayScheduler();
 
 // Security and utility Middlewares
 app.use(helmet());

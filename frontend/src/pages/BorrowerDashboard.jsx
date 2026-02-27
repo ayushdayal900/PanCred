@@ -143,9 +143,11 @@ const BorrowerDashboard = () => {
                         paymentsMade: Number(status._paymentsMade),
                         totalDuration: Number(status._totalDuration),
                         nextDueTimestamp: Number(status._nextDueTimestamp),
-                        monthlyPayment: ethers.formatEther(status._monthlyPayment),
+                        monthlyPayment: ethers.formatUnits(status._monthlyPayment, 6),
                         remainingPayments: Number(status._remainingPayments),
                         completed: status._completed,
+                        missedPayments: Number(status._missedPayments),
+                        isOverdue: status._isOverdue,
                         isDue: Date.now() / 1000 >= Number(status._nextDueTimestamp),
                     };
                 } catch (e) {
@@ -166,6 +168,42 @@ const BorrowerDashboard = () => {
         if (walletAddress) fetchAgreements();
     }, [walletAddress, walletClient]);
 
+    // Listen to Agreement Events
+    useEffect(() => {
+        if (!agreements.length || !walletClient) return;
+        const provider = new ethers.BrowserProvider(walletClient.transport);
+        const activeListeners = [];
+
+        agreements.forEach(agr => {
+            const contract = new ethers.Contract(agr.address, agreementAbi, provider);
+
+            const onPaid = (borrower, installmentNumber, amountPaid) => {
+                if (borrower.toLowerCase() === walletAddress.toLowerCase()) {
+                    toast.success(`Installment #${installmentNumber} paid!`, { id: `paid-${installmentNumber}` });
+                    fetchAgreements();
+                }
+            };
+
+            const onMissed = (borrower, cyclesMissed, paymentFailed) => {
+                if (borrower.toLowerCase() === walletAddress.toLowerCase()) {
+                    toast.error(`Installment missed! Triggers penalty.`, { id: `missed-${cyclesMissed}` });
+                    fetchAgreements();
+                }
+            };
+
+            contract.on("InstallmentPaid", onPaid);
+            contract.on("InstallmentMissed", onMissed);
+            activeListeners.push({ contract, onPaid, onMissed });
+        });
+
+        return () => {
+            activeListeners.forEach(({ contract, onPaid, onMissed }) => {
+                contract.off("InstallmentPaid", onPaid);
+                contract.off("InstallmentMissed", onMissed);
+            });
+        };
+    }, [agreements.map(a => a.address).join(','), walletClient, walletAddress]);
+
     const handlePayInstallment = async (agreement) => {
         if (!isConnected || !walletClient) return toast.error('Connect wallet first');
         const tid = toast.loading(`Paying installment for ${agreement.address.slice(0, 8)}...`);
@@ -173,11 +211,23 @@ const BorrowerDashboard = () => {
         try {
             const provider = new ethers.BrowserProvider(walletClient.transport);
             const signer = await provider.getSigner();
-            const agr = new ethers.Contract(agreement.address, agreementAbi, signer);
-            const valueWei = ethers.parseEther(agreement.monthlyPayment);
 
+            // 1. Check and approve tUSDT
+            const tokenAbi = ["function approve(address spender, uint256 amount) public returns (bool)", "function allowance(address owner, address spender) view returns (uint256)"];
+            const usdt = new ethers.Contract(addresses.mockUSDT, tokenAbi, signer);
+            const valueUnits = ethers.parseUnits(agreement.monthlyPayment.toString(), 6);
+
+            const currentAllowance = await usdt.allowance(walletAddress, agreement.address);
+            if (currentAllowance < valueUnits) {
+                toast.loading('Approving tUSDT for payment...', { id: tid });
+                const approvetx = await usdt.approve(agreement.address, valueUnits);
+                await approvetx.wait();
+            }
+
+            // 2. Call repayInstallment (not payable)
+            const agr = new ethers.Contract(agreement.address, agreementAbi, signer);
             toast.loading('Confirm payment in wallet...', { id: tid });
-            const tx = await agr.payInstallment({ value: valueWei });
+            const tx = await agr.repayInstallment();
 
             toast.loading('Broadcasting...', { id: tid });
             await tx.wait();
@@ -677,21 +727,29 @@ const BorrowerDashboard = () => {
                                                 <p className="text-[9px] font-mono text-slate-500 font-black uppercase tracking-wider">Agreement</p>
                                                 <p className="text-xs font-mono text-slate-400 mt-1">{agr.address.slice(0, 10)}...{agr.address.slice(-6)}</p>
                                             </div>
-                                            <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${agr.completed ? 'bg-emerald-500/10 text-emerald-500' : agr.isDue ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
-                                                {agr.completed ? 'Completed' : agr.isDue ? 'Payment Due' : 'Active'}
+                                            <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-lg ${agr.completed ? 'bg-emerald-500/10 text-emerald-500' : agr.isOverdue ? 'bg-red-500/10 text-red-500' : agr.isDue ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-500'}`}>
+                                                {agr.completed ? 'Completed' : agr.isOverdue ? 'Overdue' : agr.isDue ? 'Payment Due' : 'Active'}
                                             </span>
                                         </div>
 
                                         {/* Monthly payment */}
-                                        <div className="mb-6">
-                                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Monthly Installment</p>
-                                            <p className="text-3xl font-black text-white italic tracking-tighter">
-                                                {agr.monthlyPayment} <span className="text-slate-500 text-sm font-normal not-italic">ETH</span>
-                                            </p>
+                                        <div className="mb-6 flex justify-between items-end">
+                                            <div>
+                                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Monthly Installment</p>
+                                                <p className="text-3xl font-black text-white italic tracking-tighter">
+                                                    {agr.monthlyPayment} <span className="text-slate-500 text-sm font-normal not-italic">tUSDT</span>
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Total Remaining</p>
+                                                <p className="text-lg font-black text-blue-400 italic tracking-tighter">
+                                                    {(Number(agr.monthlyPayment) * agr.remainingPayments).toFixed(2)} tUSDT
+                                                </p>
+                                            </div>
                                         </div>
 
                                         {/* Stats */}
-                                        <div className="grid grid-cols-3 gap-3 mb-6 bg-slate-950/50 rounded-xl p-3 text-center">
+                                        <div className="grid grid-cols-4 gap-2 mb-6 bg-slate-950/50 rounded-xl p-3 text-center">
                                             <div>
                                                 <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Paid</p>
                                                 <p className="text-white font-black italic">{agr.paymentsMade}/{agr.totalDuration}</p>
@@ -699,6 +757,10 @@ const BorrowerDashboard = () => {
                                             <div className="border-x border-slate-900">
                                                 <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Left</p>
                                                 <p className="text-blue-400 font-black italic">{agr.remainingPayments}</p>
+                                            </div>
+                                            <div className="border-r border-slate-900">
+                                                <p className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Missed</p>
+                                                <p className="text-red-400 font-black italic">{agr.missedPayments}</p>
                                             </div>
                                             <div>
                                                 <div className="flex items-center justify-center gap-1">
@@ -733,7 +795,7 @@ const BorrowerDashboard = () => {
                                                 {payingInstallment === agr.address
                                                     ? <><FiLoader className="animate-spin inline mr-2" />Paying...</>
                                                     : agr.isDue
-                                                        ? `Pay ${agr.monthlyPayment} ETH Now`
+                                                        ? `Pay ${agr.monthlyPayment} tUSDT Now`
                                                         : `Next Due: ${nextDue}`
                                                 }
                                             </button>

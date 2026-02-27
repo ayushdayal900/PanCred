@@ -10,6 +10,21 @@
         "internalType": "address",
         "name": "_treasury",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_repaymentToken",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_automationService",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_trustScoreRegistry",
+        "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
@@ -85,6 +100,19 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "automationService",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -369,6 +397,19 @@
   },
   {
     "inputs": [],
+    "name": "repaymentToken",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "requestCounter",
     "outputs": [
       {
@@ -386,6 +427,19 @@
     "outputs": [
       {
         "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "trustScoreRegistry",
+    "outputs": [
+      {
+        "internalType": "contract ITrustScoreRegistry",
         "name": "",
         "type": "address"
       }
