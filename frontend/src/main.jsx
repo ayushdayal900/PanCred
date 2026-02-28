@@ -5,12 +5,17 @@ import App from './App.jsx'
 
 import '@rainbow-me/rainbowkit/styles.css';
 import {
-    getDefaultConfig,
     RainbowKitProvider,
-    darkTheme
+    darkTheme,
+    connectorsForWallets
 } from '@rainbow-me/rainbowkit';
-import { WagmiProvider } from 'wagmi';
-import { mainnet, sepolia, polygon, optimism, arbitrum, base } from 'wagmi/chains';
+import {
+    injectedWallet,
+    metaMaskWallet,
+    walletConnectWallet
+} from '@rainbow-me/rainbowkit/wallets';
+import { WagmiProvider, createConfig, http } from 'wagmi';
+import { sepolia } from 'wagmi/chains';
 
 import {
     QueryClientProvider,
@@ -24,7 +29,6 @@ if (typeof window !== 'undefined') {
 }
 
 import { PanCredWallet } from './wallets/PanCredWallet';
-import { injectedWallet, metaMaskWallet, walletConnectWallet } from '@rainbow-me/rainbowkit/wallets';
 
 // ── AWS Amplify (for Face Liveness guest credentials) ──────────────────────
 import '@aws-amplify/ui-react/styles.css';
@@ -39,10 +43,24 @@ Amplify.configure({
     },
 });
 
-const config = getDefaultConfig({
+const projectId = 'b1eef86bafdfb9db1124deb507c6e076';
+
+const connectors = connectorsForWallets([
+    {
+        groupName: 'PanCred Smart Wallets',
+        wallets: [PanCredWallet, injectedWallet, metaMaskWallet, walletConnectWallet],
+    },
+], {
     appName: 'MicroFin',
-    projectId: 'b1eef86bafdfb9db1124deb507c6e076',
+    projectId,
+});
+
+const config = createConfig({
+    connectors,
     chains: [sepolia],
+    transports: {
+        [sepolia.id]: http(),
+    },
 });
 
 const queryClient = new QueryClient();
@@ -55,48 +73,13 @@ createRoot(document.getElementById('root')).render(
             <QueryClientProvider client={queryClient}>
                 <AuthProvider>
                     <RainbowKitProvider theme={darkTheme({
-                        accentColor: '#2563eb', // New Stronger Blue
+                        accentColor: '#2563eb',
                         accentColorForeground: 'white',
                         borderRadius: 'large',
                         fontStack: 'system',
                         overlayBlur: 'small',
                     })}>
-                        <Toaster position="top-right" toastOptions={{
-                            className: 'premium-toast',
-                            style: {
-                                background: '#ffffff',
-                                color: '#1e293b',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '12px',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                padding: '12px 16px',
-                                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                            },
-                            success: {
-                                iconTheme: {
-                                    primary: '#16a34a',
-                                    secondary: '#ffffff',
-                                },
-                                style: {
-                                    borderLeft: '4px solid #16a34a',
-                                },
-                            },
-                            error: {
-                                iconTheme: {
-                                    primary: '#dc2626',
-                                    secondary: '#ffffff',
-                                },
-                                style: {
-                                    borderLeft: '4px solid #dc2626',
-                                },
-                            },
-                            loading: {
-                                style: {
-                                    borderLeft: '4px solid #2563eb',
-                                },
-                            },
-                        }} />
+                        <Toaster position="top-right" />
                         <App />
                     </RainbowKitProvider>
                 </AuthProvider>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import BorrowerDashboard from './BorrowerDashboard';
 import LenderDashboard from './LenderDashboard';
-import { FiLoader, FiTrendingUp, FiUser, FiShield, FiDollarSign } from 'react-icons/fi';
+import { FiLoader, FiTrendingUp, FiUser, FiShield, FiDollarSign, FiPlus } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { ethers } from 'ethers';
 import addresses from '../contracts/addresses.json';
