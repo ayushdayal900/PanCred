@@ -918,8 +918,8 @@ const BorrowerDashboard = () => {
                                                 <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-0.5">Agreement</p>
                                                 <p className="text-xs font-mono text-text-secondary">{agr.address.slice(0, 10)}...{agr.address.slice(-6)}</p>
                                             </div>
-                                            <span className={agr.completed ? 'badge-success' : agr.isOverdue ? 'badge-danger' : agr.isDue ? 'badge-warning' : 'badge'}>
-                                                {agr.completed ? 'Completed' : agr.isOverdue ? 'Overdue' : agr.isDue ? 'Payment Due' : 'Active'}
+                                            <span className={agr.completed ? 'badge-success' : agr.isDue ? 'badge-warning' : 'badge'}>
+                                                {agr.completed ? 'Completed' : agr.isDue ? 'Payment Due' : 'Active'}
                                             </span>
                                         </div>
 
