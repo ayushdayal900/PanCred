@@ -6,10 +6,10 @@ import {
     FiCopy, FiStar, FiCheckCircle, FiLoader
 } from 'react-icons/fi';
 import { useAccount } from 'wagmi';
-import { checkIdentityOwnership } from '../blockchainService';
+import { ethers } from 'ethers';
+import { checkIdentityOwnership, getSharedProvider } from '../blockchainService';
 import addresses from '../contracts/addresses.json';
 import trustScoreAbi from '../contracts/TrustScoreRegistry.json';
-import { ethers } from 'ethers';
 import toast from 'react-hot-toast';
 
 const IDENTITY_CONTRACT_ADDRESS = addresses.identity;
@@ -38,7 +38,7 @@ const Profile = () => {
                     const owned = await checkIdentityOwnership(walletAddr);
                     setHasNft(owned);
 
-                    const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+                    const provider = getSharedProvider();
                     const code = await provider.getCode(addresses.trustScore);
                     if (code !== "0x" && code !== "0x0") {
                         const trustContract = new ethers.Contract(addresses.trustScore, trustScoreAbi, provider);
@@ -56,7 +56,7 @@ const Profile = () => {
         };
         fetchChainData();
 
-        const interval = setInterval(fetchChainData, 1);
+        const interval = setInterval(fetchChainData, 30000); // 30 seconds
         return () => clearInterval(interval);
     }, [walletAddr]);
 

@@ -229,7 +229,7 @@ export default function LivenessVerification() {
                 {phase === 'detecting' && sessionId && (
                     <FaceLivenessDetector
                         sessionId={sessionId}
-                        region={import.meta.env.VITE_AWS_REGION || 'ap-south-1'}
+                        region={import.meta.env.VITE_AWS_REGION || 'us-east-1'}
                         onAnalysisComplete={handleAnalysisComplete}
                         onError={handleError}
                         displayText={{ hintMoveFaceToOvalText: 'Move your face into the oval' }}

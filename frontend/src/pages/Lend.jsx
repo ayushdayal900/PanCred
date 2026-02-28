@@ -6,7 +6,7 @@ import {
     FiDollarSign, FiLoader, FiRefreshCw, FiUser,
     FiCalendar, FiTrendingUp, FiCheckCircle, FiAlertCircle, FiZap
 } from 'react-icons/fi';
-import { parseBlockchainError } from '../blockchainService';
+import { parseBlockchainError, getSharedProvider } from '../blockchainService';
 import addresses from '../contracts/addresses.json';
 import _factoryJson from '../contracts/LoanAgreementFactory.json';
 
@@ -29,7 +29,7 @@ const Lend = () => {
         try {
             const provider = walletClient
                 ? new ethers.BrowserProvider(walletClient.transport)
-                : new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com');
+                : getSharedProvider();
 
             const factory = new ethers.Contract(addresses.loanFactory, factoryAbi, provider);
             const raw = await factory.getAllRequests();

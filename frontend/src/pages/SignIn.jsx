@@ -94,7 +94,12 @@ const SignIn = () => {
                 // If DB says not verified but we have a wallet, double check on-chain just in case
                 if (!isOnboarded && walletAddress) {
                     toast.loading('Checking on-chain Soulbound ID...', { id: tid });
-                    isOnboarded = await checkIdentityOwnership(walletAddress);
+                    try {
+                        // 5s timeout for sign-in check to prevent hanging
+                        isOnboarded = await checkIdentityOwnership(walletAddress, null, 5000);
+                    } catch (rpcErr) {
+                        console.warn("[SignIn] On-chain check failed/timed out, continuing with DB state.");
+                    }
                 }
 
                 if (isOnboarded) {

@@ -15,7 +15,7 @@ import _factoryJson from '../contracts/LoanAgreementFactory.json';
 import _agreementJson from '../contracts/LoanAgreement.json';
 const factoryAbi = Array.isArray(_factoryJson) ? _factoryJson : _factoryJson.abi;
 const agreementAbi = Array.isArray(_agreementJson) ? _agreementJson : _agreementJson.abi;
-import { mintIdentity, checkIdentityOwnership, parseBlockchainError } from '../blockchainService';
+import { mintIdentity, checkIdentityOwnership, parseBlockchainError, getSharedProvider } from '../blockchainService';
 import LoanTimeline from '../components/LoanTimeline';
 import TransactionAccordion from '../components/TransactionAccordion';
 
@@ -80,7 +80,7 @@ const BorrowerDashboard = () => {
 
     const checkContractSync = async () => {
         try {
-            const provider = walletClient ? new ethers.BrowserProvider(walletClient.transport) : new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+            const provider = walletClient ? new ethers.BrowserProvider(walletClient.transport) : getSharedProvider();
 
             // 1. Verify code exists at the address
             const code = await provider.getCode(addresses.microfinance);
@@ -134,7 +134,7 @@ const BorrowerDashboard = () => {
         }
 
         // Event listeners for real-time updates
-        const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+        const provider = getSharedProvider();
         const contract = new ethers.Contract(addresses.microfinance, microfinanceAbi, provider);
 
         const handleUpdate = () => {
@@ -174,7 +174,7 @@ const BorrowerDashboard = () => {
         try {
             const provider = walletClient
                 ? new ethers.BrowserProvider(walletClient.transport)
-                : new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com');
+                : getSharedProvider();
 
             const factory = new ethers.Contract(addresses.loanFactory, factoryAbi, provider);
             const addrs = await factory.getBorrowerAgreements(walletAddress);
@@ -365,7 +365,7 @@ const BorrowerDashboard = () => {
         try {
             const provider = walletClient
                 ? new ethers.BrowserProvider(walletClient.transport)
-                : new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+                : getSharedProvider();
             const contract = new ethers.Contract(addresses.microfinance, microfinanceAbi, provider);
 
             // Use getAllLoans() — single call, then filter client-side

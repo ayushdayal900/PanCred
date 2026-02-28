@@ -18,7 +18,7 @@ const factoryAbi = Array.isArray(_factoryJson) ? _factoryJson : _factoryJson.abi
 const agreementAbi = Array.isArray(_agreementJson) ? _agreementJson : _agreementJson.abi;
 import _mockUSDTJson from '../contracts/MockUSDT.json';
 const tUSDTAbi = Array.isArray(_mockUSDTJson) ? _mockUSDTJson : _mockUSDTJson.abi;
-import { parseBlockchainError, checkIdentityOwnership } from '../blockchainService';
+import { parseBlockchainError, checkIdentityOwnership, getSharedProvider } from '../blockchainService';
 import TransactionAccordion from '../components/TransactionAccordion';
 
 
@@ -68,7 +68,7 @@ const LenderDashboard = () => {
         fetchOnChainLoans();
 
         // Event listeners for real-time updates
-        const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+        const provider = getSharedProvider();
         const contract = new ethers.Contract(addresses.microfinance, microfinanceAbi, provider);
 
         const handleUpdate = () => {
@@ -94,7 +94,7 @@ const LenderDashboard = () => {
         try {
             const provider = walletClient
                 ? new ethers.BrowserProvider(walletClient.transport)
-                : new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com');
+                : getSharedProvider();
 
             const factory = new ethers.Contract(addresses.loanFactory, factoryAbi, provider);
             const addrs = await factory.getLenderAgreements(walletAddress);
@@ -212,7 +212,7 @@ const LenderDashboard = () => {
         try {
             const provider = walletClient
                 ? new ethers.BrowserProvider(walletClient.transport)
-                : new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com');
+                : getSharedProvider();
             const contract = new ethers.Contract(addresses.mockUSDT, tUSDTAbi, provider);
             const bal = await contract.balanceOf(walletAddress);
             const decimals = await contract.decimals();
@@ -310,7 +310,7 @@ const LenderDashboard = () => {
         try {
             const provider = walletClient
                 ? new ethers.BrowserProvider(walletClient.transport)
-                : new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+                : getSharedProvider();
             const contract = new ethers.Contract(addresses.microfinance, microfinanceAbi, provider);
 
             // Single call — getAllLoans(), filter client-side
@@ -423,7 +423,7 @@ const LenderDashboard = () => {
             let trustRegistry = null;
 
             try {
-                const provider = new ethers.JsonRpcProvider('https://ethereum-sepolia-rpc.publicnode.com');
+                const provider = getSharedProvider();
                 const blockNum = await Promise.race([
                     provider.getBlockNumber(),
                     new Promise((_, rej) => setTimeout(() => rej(new Error('RPC timeout')), 8000))

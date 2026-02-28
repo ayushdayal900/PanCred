@@ -6,6 +6,7 @@ import { FiLoader, FiTrendingUp, FiUser, FiShield, FiDollarSign } from 'react-ic
 import toast from 'react-hot-toast';
 import { ethers } from 'ethers';
 import addresses from '../contracts/addresses.json';
+import { getSharedProvider } from '../blockchainService';
 
 // ---------- Protocol Insurance Pool Widget ----------
 const InsurancePoolWidget = () => {
@@ -15,7 +16,7 @@ const InsurancePoolWidget = () => {
     useEffect(() => {
         const fetchBalance = async () => {
             try {
-                const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+                const provider = getSharedProvider();
                 const bal = await provider.getBalance(addresses.treasury);
                 setBalance(ethers.formatEther(bal));
             } catch (err) {
