@@ -75,13 +75,24 @@ const Lend = () => {
 
     const handleFund = async (request) => {
         if (!isConnected) return toast.error('Connect your wallet first');
-        if (!walletClient) return toast.error('Wallet not ready');
+
+        // Use window.ethereum directly — avoids MetaMask's broken ERC20
+        // rendering path that causes "toLowerCase of undefined" crash
+        if (!window.ethereum) return toast.error('MetaMask not found');
 
         const tid = toast.loading(`Funding loan #${request.id}...`);
         setFunding(request.id);
         try {
-            const provider = new ethers.BrowserProvider(walletClient.transport);
+            const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
+
+            // Verify we are on Sepolia before sending any transaction
+            const network = await provider.getNetwork();
+            if (network.chainId !== 11155111n) {
+                toast.dismiss(tid);
+                return toast.error('Please switch MetaMask to the Sepolia network first.');
+            }
+
             const factory = new ethers.Contract(addresses.loanFactory, factoryAbi, signer);
 
             let tx;
@@ -91,27 +102,31 @@ const Lend = () => {
                 toast.loading('Confirm in wallet — send exact principal...', { id: tid });
                 tx = await factory.fundLoanRequest(request.id, { value: principalWei });
             } else {
-                // ERC20 token setup - approval needed for lender so Factory can transferFrom
-                const tokenAbi = ["function approve(address spender, uint256 amount) public returns (bool)", "function allowance(address owner, address spender) view returns (uint256)"];
+                // ERC20 — approve first, then fund
+                const tokenAbi = [
+                    "function approve(address spender, uint256 amount) public returns (bool)",
+                    "function allowance(address owner, address spender) view returns (uint256)"
+                ];
                 const usdt = new ethers.Contract(addresses.mockUSDT, tokenAbi, signer);
                 const principalUnits = ethers.parseUnits(request.principal, 6);
 
                 const currentAllowance = await usdt.allowance(walletAddress, addresses.loanFactory);
                 if (currentAllowance < principalUnits) {
-                    toast.loading('Approving tUSDT for loan bridge...', { id: tid });
+                    toast.loading('Step 1/2: Approve tUSDT spend in MetaMask...', { id: tid });
                     const approvetx = await usdt.approve(addresses.loanFactory, principalUnits);
+                    toast.loading('Waiting for approval confirmation...', { id: tid });
                     await approvetx.wait();
                 }
 
-                toast.loading('Confirm in wallet...', { id: tid });
-                tx = await factory.fundLoanRequest(request.id); // zero msg.value for ERC20
+                toast.loading('Step 2/2: Confirm loan funding in MetaMask...', { id: tid });
+                tx = await factory.fundLoanRequest(request.id);
             }
 
-            toast.loading('Deploying LoanAgreement contract...', { id: tid });
+            toast.loading('Broadcasting — deploying LoanAgreement contract...', { id: tid });
             await tx.wait();
 
-            toast.success(`Loan #${request.id} funded! Agreement contract deployed. Principal sent to borrower.`, { id: tid });
-            fetchRequests(); // refresh list
+            toast.success(`Loan #${request.id} funded! Agreement deployed. Principal sent to borrower.`, { id: tid });
+            fetchRequests();
         } catch (err) {
             console.error('[Lend] fundLoanRequest failed:', err);
             toast.error(parseBlockchainError(err), { id: tid });

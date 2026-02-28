@@ -136,11 +136,20 @@ const LoanRequestForm = ({ walletAddress, walletClient, userProfile, trustScore,
         if (repaymentNum < principalNum) { toast.error('Total repayment must be ≥ principal'); return; }
         if (durationNum < 1 || durationNum > 36) { toast.error('Duration must be 1–36 months'); return; }
         if (loanMode === 0 && !canUseEth) { toast.error('ETH loans require Trust Score ≥ 700 and 1 completed loan.'); return; }
+        if (!window.ethereum) { toast.error('MetaMask not found'); return; }
 
         const tid = toast.loading('Preparing loan ad...');
         setSubmitting(true);
         try {
-            const provider = new ethers.BrowserProvider(walletClient.transport);
+            // Use window.ethereum directly to avoid MetaMask's broken ERC20 rendering path
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const network = await provider.getNetwork();
+            if (network.chainId !== 11155111n) {
+                toast.dismiss(tid);
+                toast.error('Please switch MetaMask to the Sepolia network first.');
+                return;
+            }
+
             const signer = await provider.getSigner();
             const factory = new ethers.Contract(addresses.loanFactory, factoryAbi, signer);
 
