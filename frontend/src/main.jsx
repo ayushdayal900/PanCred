@@ -41,13 +41,13 @@ Amplify.configure({
 
 const config = getDefaultConfig({
     appName: 'MicroFin',
-    projectId: '452cd38a8eefe3df3531bcf91c4d930c', // Valid public WalletConnect ID for testing
+    projectId: 'b1eef86bafdfb9db1124deb507c6e076', // Valid WalletConnect ID from user
     chains: [sepolia, mainnet, polygon, optimism, arbitrum, base],
 
     wallets: [
         {
             groupName: 'PanCred Smart Contract Wallets',
-            wallets: [PanCredWallet],
+            wallets: [PanCredWallet()],
         },
         {
             groupName: 'Other Providers',
