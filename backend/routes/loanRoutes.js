@@ -10,7 +10,8 @@ const {
     getLenderUpcomingPayments,
     postLenderAd,
     getLenderAds,
-    deleteLenderAd
+    deleteLenderAd,
+    registerAgreement
 } = require('../controllers/loanController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -27,5 +28,8 @@ router.put('/:id/repay', protect, repayLoan);
 router.post('/lender/ad', protect, postLenderAd);
 router.get('/lender/my-ads', protect, getLenderAds);
 router.delete('/lender/ad/:id', protect, deleteLenderAd);
+
+// Register deployed agreement address for auto-repay
+router.post('/register-agreement', protect, registerAgreement);
 
 module.exports = router;

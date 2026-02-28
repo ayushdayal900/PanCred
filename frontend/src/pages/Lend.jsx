@@ -76,8 +76,7 @@ const Lend = () => {
     const handleFund = async (request) => {
         if (!isConnected) return toast.error('Connect your wallet first');
 
-        // Use window.ethereum directly — avoids MetaMask's broken ERC20
-        // rendering path that causes "toLowerCase of undefined" crash
+        // Use window.ethereum directly to avoid MetaMask's broken ERC20 rendering path
         if (!window.ethereum) return toast.error('MetaMask not found');
 
         const tid = toast.loading(`Funding loan #${request.id}...`);
@@ -85,8 +84,9 @@ const Lend = () => {
         try {
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
+            const lenderAddress = await signer.getAddress();
 
-            // Verify we are on Sepolia before sending any transaction
+            // Verify Sepolia
             const network = await provider.getNetwork();
             if (network.chainId !== 11155111n) {
                 toast.dismiss(tid);
@@ -97,12 +97,10 @@ const Lend = () => {
 
             let tx;
             if (request.mode === 0) {
-                // native ETH
                 const principalWei = ethers.parseEther(request.principal);
                 toast.loading('Confirm in wallet — send exact principal...', { id: tid });
                 tx = await factory.fundLoanRequest(request.id, { value: principalWei });
             } else {
-                // ERC20 — approve first, then fund
                 const tokenAbi = [
                     "function approve(address spender, uint256 amount) public returns (bool)",
                     "function allowance(address owner, address spender) view returns (uint256)"
@@ -110,7 +108,7 @@ const Lend = () => {
                 const usdt = new ethers.Contract(addresses.mockUSDT, tokenAbi, signer);
                 const principalUnits = ethers.parseUnits(request.principal, 6);
 
-                const currentAllowance = await usdt.allowance(walletAddress, addresses.loanFactory);
+                const currentAllowance = await usdt.allowance(lenderAddress, addresses.loanFactory);
                 if (currentAllowance < principalUnits) {
                     toast.loading('Step 1/2: Approve tUSDT spend in MetaMask...', { id: tid });
                     const approvetx = await usdt.approve(addresses.loanFactory, principalUnits);
@@ -123,9 +121,51 @@ const Lend = () => {
             }
 
             toast.loading('Broadcasting — deploying LoanAgreement contract...', { id: tid });
-            await tx.wait();
+            const receipt = await tx.wait();
 
-            toast.success(`Loan #${request.id} funded! Agreement deployed. Principal sent to borrower.`, { id: tid });
+            // ── CRITICAL: Extract the deployed agreement address from LoanFunded event ──
+            // Without this, the backend auto-repay service never finds the agreement.
+            let agreementAddress = null;
+            try {
+                for (const log of receipt.logs) {
+                    try {
+                        const parsed = factory.interface.parseLog(log);
+                        if (parsed && parsed.name === 'LoanFunded') {
+                            agreementAddress = parsed.args.agreementAddress;
+                            console.log('[Lend] 🏦 Agreement deployed at:', agreementAddress);
+                            break;
+                        }
+                    } catch { /* skip non-matching logs */ }
+                }
+            } catch (e) {
+                console.error('[Lend] Failed to parse LoanFunded event:', e);
+            }
+
+            // ── Notify backend with the real agreement address ──────────────────────
+            if (agreementAddress) {
+                try {
+                    const token = JSON.parse(localStorage.getItem('userInfo') || '{}')?.token;
+                    const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                    await fetch(`${API}/api/loans/register-agreement`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            borrowerAddress: request.borrower,
+                            lenderAddress,
+                            agreementAddress,
+                            txHash: receipt.hash,
+                        })
+                    });
+                    console.log('[Lend] ✅ Agreement address registered with backend');
+                } catch (backendErr) {
+                    console.warn('[Lend] ⚠️ Failed to register agreement with backend:', backendErr);
+                }
+            }
+
+            toast.success(`Loan #${request.id} funded! Agreement at ${agreementAddress?.slice(0, 10)}...`, { id: tid });
             fetchRequests();
         } catch (err) {
             console.error('[Lend] fundLoanRequest failed:', err);

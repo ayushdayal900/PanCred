@@ -514,3 +514,74 @@ exports.deleteLenderAd = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Register the deployed LoanAgreement contract address for auto-repay
+// @route   POST /api/loans/register-agreement
+// Called by Lend.jsx immediately after fundLoanRequest() tx confirms.
+// Stores the real 0x... agreement address so autoRepayService can find it.
+exports.registerAgreement = async (req, res) => {
+    try {
+        const { borrowerAddress, lenderAddress, agreementAddress, txHash } = req.body;
+
+        if (!agreementAddress || !borrowerAddress) {
+            return res.status(400).json({ success: false, message: 'agreementAddress and borrowerAddress required' });
+        }
+
+        // Validate it's a real Ethereum address
+        let checksumAddr;
+        try {
+            checksumAddr = ethers.getAddress(agreementAddress);
+        } catch {
+            return res.status(400).json({ success: false, message: 'Invalid agreementAddress format' });
+        }
+
+        // Find the most recent Funded loan for this borrower that doesn't yet have an agreement address
+        const borrower = await User.findOne({ walletAddress: { $regex: new RegExp(borrowerAddress, 'i') } });
+        if (!borrower) {
+            return res.status(404).json({ success: false, message: 'Borrower not found' });
+        }
+
+        // Look for a loan that belongs to this borrower with status Funded or Active and no agreement yet
+        const loan = await LoanRequest.findOne({
+            borrower: borrower._id,
+            status: { $in: ['Funded', 'Active', 'Pending'] },
+            $or: [
+                { simulatedSmartContractId: { $exists: false } },
+                { simulatedSmartContractId: null },
+                // Also update if it has a numeric ID (old bug) instead of address
+                { simulatedSmartContractId: { $not: /^0x[0-9a-fA-F]{40}$/ } }
+            ]
+        }).sort({ createdAt: -1 });
+
+        if (!loan) {
+            // If we can't find by the pattern, just find the latest funded loan for this borrower
+            const latestLoan = await LoanRequest.findOne({
+                borrower: borrower._id,
+                status: { $in: ['Funded', 'Active'] }
+            }).sort({ createdAt: -1 });
+
+            if (latestLoan) {
+                latestLoan.simulatedSmartContractId = checksumAddr;
+                latestLoan.status = 'Funded';
+                if (txHash) latestLoan.repaymentTxHash = txHash;
+                await latestLoan.save();
+                console.log(`[RegisterAgreement] Updated loan ${latestLoan._id} with agreement ${checksumAddr}`);
+                return res.status(200).json({ success: true, loanId: latestLoan._id, agreementAddress: checksumAddr });
+            }
+
+            return res.status(404).json({ success: false, message: 'No matching loan found. Try funding from the marketplace.' });
+        }
+
+        loan.simulatedSmartContractId = checksumAddr;
+        loan.status = 'Funded';
+        if (txHash) loan.repaymentTxHash = txHash;
+        await loan.save();
+
+        console.log(`[RegisterAgreement] ✅ Loan ${loan._id} → Agreement ${checksumAddr}`);
+        res.status(200).json({ success: true, loanId: loan._id, agreementAddress: checksumAddr });
+    } catch (error) {
+        console.error('[RegisterAgreement] Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
