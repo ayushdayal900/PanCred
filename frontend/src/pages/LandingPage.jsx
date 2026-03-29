@@ -142,7 +142,7 @@ const LandingPage = () => {
                             </h1>
 
                             <p className="text-base md:text-lg text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
-                                Peer-to-peer lending powered by decentralized identity, on-chain trust scores, and dynamic insurance — a transparent financial network with no intermediaries.
+                                Peer-to-peer lending powered by decentralized identity, on-chain trust scores, and dynamic insurance - a transparent financial network with no intermediaries.
                             </p>
 
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-sm mx-auto sm:max-w-none">
