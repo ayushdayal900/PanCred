@@ -247,7 +247,7 @@ async function listenToContractEvents() {
                 }
             }
 
-            lastPolledBlock = currentBlock;
+            // lastPolledBlock = currentBlock; // Moved to the very end of the interval
         } catch (error) {
             console.warn('⚠️ Microfinance Event polling warning:', error.message);
         }
@@ -311,6 +311,9 @@ async function listenToContractEvents() {
                 console.warn('⚠️ Factory Event polling warning:', error.message);
             }
         }
+
+        // Properly update the block pointer after ALL events are processed
+        lastPolledBlock = currentBlock;
     }, 15000); // Poll every 15 seconds
 }
 

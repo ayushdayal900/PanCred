@@ -65,7 +65,13 @@ const connectRedis = async () => {
             url: process.env.REDIS_URL
         });
 
-        redisClient.on('error', (err) => console.log('Redis Client Error', err));
+        redisClient.on('error', (err) => {
+            if (err.code === 'ENOTFOUND') {
+                // Suppress constant DNS lookup failures to prevent log flooding
+                return;
+            }
+            console.log('Redis Client Error', err.message || err);
+        });
 
         await redisClient.connect();
         console.log('Redis connected successfully');
