@@ -94,9 +94,24 @@ listenToContractEvents();
 // Initialize Automatic Repayment Cron (every 60 seconds)
 startAutoRepayScheduler();
 
+// CORS must come BEFORE helmet to ensure preflight OPTIONS responses include correct headers
+const corsOptions = {
+    origin: [
+        'https://pancred.space',
+        'https://www.pancred.space',
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:5000',
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+};
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Handle preflight for ALL routes
+
 // Security and utility Middlewares
 app.use(helmet());
-app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
