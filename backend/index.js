@@ -108,7 +108,7 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle preflight for ALL routes
+app.options(/(.*)/, cors(corsOptions)); // Handle preflight for ALL routes
 
 // Security and utility Middlewares
 app.use(helmet());
