@@ -164,10 +164,20 @@ async function processAgreement(loanDoc, agreementAddress) {
 
     // Log detailed diagnostics per user request
     const agr = new ethers.Contract(agreementAddress, agreementAbi, provider);
-    const tokenAddress = await agr.token();
-    const tokenContract = new ethers.Contract(tokenAddress, usdtAbi, provider);
-    const borrowerAddress = loanDoc.borrower?.walletAddress || loanDoc.borrower;
-    const bal = await tokenContract.balanceOf(borrowerAddress);
+    let tokenAddress;
+    let bal = 0n;
+    try {
+        if (typeof agr.token === 'function') {
+            tokenAddress = await agr.token();
+            if (tokenAddress && tokenAddress !== ethers.ZeroAddress) {
+                const tokenContract = new ethers.Contract(tokenAddress, usdtAbi, provider);
+                const borrowerAddress = loanDoc.borrower?.walletAddress || loanDoc.borrower;
+                bal = await tokenContract.balanceOf(borrowerAddress);
+            }
+        }
+    } catch (e) {
+        console.warn(`[AutoRepay] Could not fetch token balance for agreement ${agreementAddress}`);
+    }
 
     console.log(`\n[AutoRepay] 🔍 Deep Diagnostic — Loan: ${loanDoc._id} | Agrmnt: ${agreementAddress}`);
     console.log(`- Block Timestamp: ${blockTs}`);
