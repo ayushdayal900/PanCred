@@ -145,8 +145,9 @@ async function listenToContractEvents() {
 
     // Poll interval - check every 15 seconds
     setInterval(async () => {
+        let currentBlock;
         try {
-            const currentBlock = await provider.getBlockNumber();
+            currentBlock = await provider.getBlockNumber();
             if (currentBlock <= lastPolledBlock) return;
 
             console.log(`🔍 Polling blocks ${lastPolledBlock + 1} to ${currentBlock}...`);
@@ -247,73 +248,67 @@ async function listenToContractEvents() {
                 }
             }
 
-            // lastPolledBlock = currentBlock; // Moved to the very end of the interval
+            // Factory Polling — reuse same currentBlock so ranges never go backwards
+            if (loanFactoryContract) {
+                try {
+                    const requestedEvents = await loanFactoryContract.queryFilter('LoanRequested', lastPolledBlock + 1, currentBlock);
+                    for (const event of requestedEvents) {
+                        const { id: onChainId, borrower, principal, mode } = event.args;
+                        console.log(`[FactoryEvent] LoanRequested detected: ID ${onChainId} by ${borrower}`);
+
+                        try {
+                            const borrowerUser = await User.findOne({ walletAddress: borrower.toLowerCase() });
+                            let loanReq = await LoanRequest.findOne({ simulatedSmartContractId: onChainId.toString() });
+
+                            if (!loanReq) {
+                                loanReq = new LoanRequest({
+                                    borrower: borrowerUser?._id,
+                                    amountRequested: Number(ethers.formatUnits(principal, mode === 0 ? 18 : 6)),
+                                    status: 'Pending',
+                                    simulatedSmartContractId: onChainId.toString(),
+                                    loanMode: Number(mode),
+                                    purpose: 'On-chain Factory Request'
+                                });
+                                await loanReq.save();
+                                console.log(`[FactoryEvent] New LoanRequest synced: ${onChainId}`);
+                            }
+                        } catch (err) {
+                            console.error('Error processing LoanRequested event:', err);
+                        }
+                    }
+
+                    const factoryFundedEvents = await loanFactoryContract.queryFilter('LoanFunded', lastPolledBlock + 1, currentBlock);
+                    for (const event of factoryFundedEvents) {
+                        const { id: onChainId, lender, agreementAddress } = event.args;
+                        console.log(`[FactoryEvent] LoanFunded detected: ID ${onChainId} by ${lender}`);
+
+                        try {
+                            const loanReq = await LoanRequest.findOne({ simulatedSmartContractId: onChainId.toString() });
+                            if (loanReq) {
+                                loanReq.status = 'Funded';
+                                loanReq.simulatedSmartContractId = agreementAddress; // Switch to Agreement Address!
+                                loanReq.fundingTxHash = event.transactionHash;
+
+                                const lenderUser = await User.findOne({ walletAddress: lender.toLowerCase() });
+                                if (lenderUser) loanReq.lender = lenderUser._id;
+
+                                await loanReq.save();
+                                console.log(`[FactoryEvent] Loan ${onChainId} updated to Funded (Agr: ${agreementAddress})`);
+                            }
+                        } catch (err) {
+                            console.error('Error processing LoanFunded event:', err);
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Factory Event polling warning:', error.message);
+                }
+            }
+
+            // Update block pointer ONCE after ALL pollers finish — fixes invalid block range bug
+            lastPolledBlock = currentBlock;
         } catch (error) {
             console.warn('⚠️ Microfinance Event polling warning:', error.message);
         }
-
-        // Factory Polling
-        if (loanFactoryContract) {
-            try {
-                const currentBlock = await provider.getBlockNumber();
-
-                // 1. Check for LoanRequested (New Installment Loan Ads)
-                const requestedEvents = await loanFactoryContract.queryFilter('LoanRequested', lastPolledBlock + 1, currentBlock);
-                for (const event of requestedEvents) {
-                    const { id: onChainId, borrower, principal, mode } = event.args;
-                    console.log(`[FactoryEvent] LoanRequested detected: ID ${onChainId} by ${borrower}`);
-
-                    try {
-                        const borrowerUser = await User.findOne({ walletAddress: borrower.toLowerCase() });
-                        let loanReq = await LoanRequest.findOne({ simulatedSmartContractId: onChainId.toString() });
-
-                        if (!loanReq) {
-                            loanReq = new LoanRequest({
-                                borrower: borrowerUser?._id,
-                                amountRequested: Number(ethers.formatUnits(principal, mode === 0 ? 18 : 6)),
-                                status: 'Pending',
-                                simulatedSmartContractId: onChainId.toString(),
-                                loanMode: Number(mode),
-                                purpose: 'On-chain Factory Request'
-                            });
-                            await loanReq.save();
-                            console.log(`[FactoryEvent] New LoanRequest synced: ${onChainId}`);
-                        }
-                    } catch (err) {
-                        console.error('Error processing LoanRequested event:', err);
-                    }
-                }
-
-                // 2. Check for LoanFunded (Installment Loan Funded)
-                const fundedEvents = await loanFactoryContract.queryFilter('LoanFunded', lastPolledBlock + 1, currentBlock);
-                for (const event of fundedEvents) {
-                    const { id: onChainId, lender, agreementAddress } = event.args;
-                    console.log(`[FactoryEvent] LoanFunded detected: ID ${onChainId} by ${lender}`);
-
-                    try {
-                        const loanReq = await LoanRequest.findOne({ simulatedSmartContractId: onChainId.toString() });
-                        if (loanReq) {
-                            loanReq.status = 'Funded';
-                            loanReq.simulatedSmartContractId = agreementAddress; // Switch to Agreement Address!
-                            loanReq.fundingTxHash = event.transactionHash;
-
-                            const lenderUser = await User.findOne({ walletAddress: lender.toLowerCase() });
-                            if (lenderUser) loanReq.lender = lenderUser._id;
-
-                            await loanReq.save();
-                            console.log(`[FactoryEvent] Loan ${onChainId} updated to Funded (Agr: ${agreementAddress})`);
-                        }
-                    } catch (err) {
-                        console.error('Error processing LoanFunded event:', err);
-                    }
-                }
-            } catch (error) {
-                console.warn('⚠️ Factory Event polling warning:', error.message);
-            }
-        }
-
-        // Properly update the block pointer after ALL events are processed
-        lastPolledBlock = currentBlock;
     }, 15000); // Poll every 15 seconds
 }
 
