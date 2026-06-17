@@ -1,0 +1,16 @@
+{
+  "name": "chaindefi-monorepo",
+  "version": "1.0.0",
+  "description": "ChainDeFi Microfinance Platform Monorepo",
+  "scripts": {
+    "install-all": "npm install && npm install --prefix blockchain && npm install --prefix backend && npm install --prefix frontend",
+    "compile-contracts": "cd blockchain && npx hardhat compile",
+    "deploy-local": "cd blockchain && npx hardhat run scripts/deployEverything.js --network localhost",
+    "deploy-sepolia": "cd blockchain && npx hardhat run scripts/deployEverything.js --network sepolia",
+    "start-node": "cd blockchain && npx hardhat node",
+    "start-backend": "npm start --prefix backend",
+    "start-frontend": "npm run dev --prefix frontend",
+    "dev": "npx concurrently \"npm run start-backend\" \"npm run start-frontend\"",
+    "dev-local": "npx concurrently \"npm run start-node\" \"npm run start-backend\" \"npm run start-frontend\""
+  }
+}
