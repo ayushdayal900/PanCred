@@ -12,8 +12,15 @@ const claimFaucet = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, error: 'User not found' });
         }
-        if (!user.walletAddress) {
+        
+        const walletAddress = req.body.walletAddress || user.walletAddress;
+        if (!walletAddress) {
             return res.status(400).json({ success: false, error: 'Wallet address not found in profile' });
+        }
+
+        if (!user.walletAddress) {
+            user.walletAddress = walletAddress.toLowerCase();
+            await user.save();
         }
 
         if (user.hasClaimedFaucet) {

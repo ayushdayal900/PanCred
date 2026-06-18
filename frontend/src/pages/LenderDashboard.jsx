@@ -223,38 +223,38 @@ const LenderDashboard = () => {
     };
 
     const handleClaimFaucet = async () => {
-        if (!walletClient) {
+        if (!walletAddress) {
             toast.error('Connect your wallet first');
-            return;
-        }
-        if (!addresses.mockUSDT) {
-            toast.error('MockUSDT contract address not configured');
             return;
         }
 
         setClaimingFaucet(true);
-        const tid = toast.loading('Preparing faucet claim...');
+        const tid = toast.loading('Requesting 1000 tUSDT from faucet...');
         try {
-            const provider = new ethers.BrowserProvider(walletClient.transport);
-            const signer = await provider.getSigner();
-            const contract = new ethers.Contract(addresses.mockUSDT, tUSDTAbi, signer);
+            const token = JSON.parse(localStorage.getItem('userInfo') || '{}')?.token;
+            const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            
+            const response = await fetch(`${API}/api/faucet/claim`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ walletAddress })
+            });
 
-            // Get decimals then mint 1000 tokens
-            const decimals = await contract.decimals();
-            const amount = ethers.parseUnits('1000', decimals);
-
-            toast.loading('Confirm in wallet...', { id: tid });
-            const tx = await contract.mint(walletAddress, amount);
-
-            toast.loading('Minting 1000 tUSDT on Sepolia...', { id: tid });
-            await tx.wait();
+            const data = await response.json();
+            
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Failed to claim faucet');
+            }
 
             toast.success('1000 tUSDT minted to your wallet!', { id: tid });
             fetchBalance();
         } catch (err) {
-            const msg = err?.reason || err?.message || 'Faucet mint failed';
-            toast.error(msg.length > 80 ? 'Mint failed — check console' : msg, { id: tid });
-            console.error('[Faucet] mint error:', err);
+            const msg = err.message || 'Faucet mint failed';
+            toast.error(msg, { id: tid });
+            console.error('[Faucet] claim error:', err);
         } finally {
             setClaimingFaucet(false);
         }

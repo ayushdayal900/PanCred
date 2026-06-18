@@ -14,7 +14,22 @@ const connectDB = async () => {
     } catch (error) {
         console.error(`Error connecting to MongoDB: ${error.message}`);
 
-        // Try falling back to mongodb-memory-server
+        // If standard MONGO_URI fallback is provided, try that first
+        if (process.env.MONGO_URI_FALLBACK && error.message && error.message.includes('querySrv')) {
+            try {
+                console.log('Attempting MongoDB fallback using MONGO_URI_FALLBACK...');
+                const fallbackConn = await mongoose.connect(process.env.MONGO_URI_FALLBACK, {
+                    serverSelectionTimeoutMS: 5000,
+                    family: 4
+                });
+                console.log(`MongoDB Connected (fallback): ${fallbackConn.connection.host}`);
+                return;
+            } catch (fbErr) {
+                console.error('Fallback MongoDB connection failed:', fbErr.message);
+            }
+        }
+
+        // Try falling back to mongodb-memory-server if all else fails
         console.log('Attempting to start local in-memory MongoDB server as fallback...');
         try {
             const { MongoMemoryServer } = require('mongodb-memory-server');
@@ -30,21 +45,6 @@ const connectDB = async () => {
             return;
         } catch (memErr) {
             console.error('Failed to start/connect to local in-memory MongoDB fallback:', memErr.message);
-        }
-
-        // If standard MONGO_URI fallback is provided, try that too
-        if (process.env.MONGO_URI_FALLBACK && error.message && error.message.includes('querySrv')) {
-            try {
-                console.log('Attempting MongoDB fallback using MONGO_URI_FALLBACK');
-                const fallbackConn = await mongoose.connect(process.env.MONGO_URI_FALLBACK, {
-                    serverSelectionTimeoutMS: 5000,
-                    family: 4
-                });
-                console.log(`MongoDB Connected (fallback): ${fallbackConn.connection.host}`);
-                return;
-            } catch (fbErr) {
-                console.error('Fallback MongoDB connection failed:', fbErr.message);
-            }
         }
 
         // If everything fails, retry original connectDB after a delay
