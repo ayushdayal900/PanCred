@@ -78,11 +78,11 @@ const Profile = () => {
                 </div>
                 {/* Trust Score Badge */}
                 <div className="flex items-center gap-3 px-5 py-3 rounded-xl"
-                    style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-                    <FiAward style={{ color: '#2563EB' }} size={20} />
+                    style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
+                    <FiAward style={{ color: 'var(--brand-accent)' }} size={20} />
                     <div>
                         <p className="text-xs text-text-secondary font-medium">On-Chain Score</p>
-                        <p className="text-xl font-bold" style={{ color: '#2563EB' }}>{onChainTrustScore}</p>
+                        <p className="text-xl font-bold" style={{ color: 'var(--brand-accent)' }}>{onChainTrustScore}</p>
                     </div>
                 </div>
             </div>
@@ -93,7 +93,7 @@ const Profile = () => {
                     {/* Identity Info */}
                     <section className="premium-card">
                         <div className="flex items-center gap-2 mb-6">
-                            <FiUser style={{ color: '#2563EB' }} size={16} />
+                            <FiUser style={{ color: 'var(--brand-accent)' }} size={16} />
                             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Account Details</span>
                         </div>
 
@@ -120,8 +120,8 @@ const Profile = () => {
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Protocol Role</label>
                                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
-                                    style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#2563EB' }}></div>
+                                    style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--brand-accent)' }}></div>
                                     <p className="text-sm font-semibold" style={{ color: '#1D4ED8' }}>{role}</p>
                                 </div>
                             </div>
@@ -132,7 +132,7 @@ const Profile = () => {
                     <section className="premium-card">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                             <div className="flex items-center gap-2">
-                                <FiStar style={{ color: '#2563EB' }} size={16} />
+                                <FiStar style={{ color: 'var(--brand-accent)' }} size={16} />
                                 <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Trust Progression</span>
                             </div>
                             <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold"
@@ -152,11 +152,11 @@ const Profile = () => {
                                     animate={{ width: `${progressPercent}%` }}
                                     transition={{ duration: 0.8, ease: 'easeOut' }}
                                     className="h-full rounded-full"
-                                    style={{ backgroundColor: '#2563EB' }}
+                                    style={{ backgroundColor: 'var(--brand-accent)' }}
                                 />
                             </div>
                             <p className="text-xs text-text-secondary leading-relaxed flex items-start gap-2">
-                                <FiActivity size={13} className="flex-shrink-0 mt-0.5" style={{ color: '#2563EB' }} />
+                                <FiActivity size={13} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--brand-accent)' }} />
                                 Trust score is recalculated on-chain after every repayment. Higher scores unlock increased capital ceilings and lower fee structures.
                             </p>
                         </div>
@@ -169,16 +169,16 @@ const Profile = () => {
                     <div className="premium-card text-center">
                         <div className={`w-20 h-20 mx-auto mb-5 rounded-2xl flex items-center justify-center transition-all duration-300`}
                             style={{
-                                backgroundColor: hasNft ? '#EFF6FF' : '#F8FAFC',
-                                border: `2px solid ${hasNft ? '#BFDBFE' : '#E2E8F0'}`
+                                backgroundColor: hasNft ? 'var(--brand-light)' : '#F8FAFC',
+                                border: `2px solid ${hasNft ? 'var(--brand-light-border)' : '#E2E8F0'}`
                             }}>
-                            <FiShield size={40} style={{ color: hasNft ? '#2563EB' : '#94A3B8' }} />
+                            <FiShield size={40} style={{ color: hasNft ? 'var(--brand-accent)' : '#94A3B8' }} />
                         </div>
                         <h4 className="text-lg font-bold text-text-primary mb-1">PanCred ID</h4>
                         <p className="text-xs text-text-secondary font-medium uppercase tracking-wider mb-5">Soulbound Identity NFT</p>
 
                         {nftLoading ? (
-                            <FiLoader className="animate-spin mx-auto" size={18} style={{ color: '#2563EB' }} />
+                            <FiLoader className="animate-spin mx-auto" size={18} style={{ color: 'var(--brand-accent)' }} />
                         ) : (
                             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold ${hasNft ? 'badge-success' : 'badge'}`}>
                                 {hasNft ? <><FiCheckCircle size={13} /> Verified</> : 'Not Detected'}

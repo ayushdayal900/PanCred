@@ -449,14 +449,14 @@ const Onboarding = () => {
                                         : 'text-text-secondary'
                                 }`}
                                 style={{
-                                    backgroundColor: currentStep >= s.id ? '#2563EB' : '#F1F5F9',
-                                    borderColor: currentStep >= s.id ? '#2563EB' : '#E2E8F0',
+                                    backgroundColor: currentStep >= s.id ? 'var(--brand-accent)' : '#F1F5F9',
+                                    borderColor: currentStep >= s.id ? 'var(--brand-accent)' : '#E2E8F0',
                                     color: currentStep >= s.id ? 'white' : '#64748B',
                                 }}>
                                 {currentStep > s.id ? <FiCheckCircle size={15} /> : s.icon}
                             </div>
                             <span className="text-[10px] mt-2 font-semibold uppercase tracking-wider"
-                                style={{ color: currentStep >= s.id ? '#2563EB' : '#94A3B8' }}>
+                                style={{ color: currentStep >= s.id ? 'var(--brand-accent)' : '#94A3B8' }}>
                                 {s.title}
                             </span>
                         </div>
@@ -468,7 +468,7 @@ const Onboarding = () => {
                         animate={{ width: `${progress}%` }}
                         transition={{ duration: 0.4 }}
                         className="h-full rounded-full"
-                        style={{ backgroundColor: '#2563EB' }}
+                        style={{ backgroundColor: 'var(--brand-accent)' }}
                     />
                 </div>
             </div>
@@ -485,11 +485,11 @@ const Onboarding = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                                 <button onClick={() => handleRoleSelect('Lender')}
                                     className="group p-7 rounded-2xl border-2 transition-all text-left hover:shadow-md"
-                                    style={{ backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }}
-                                    onMouseEnter={e => e.currentTarget.style.borderColor = '#2563EB'}
-                                    onMouseLeave={e => e.currentTarget.style.borderColor = '#BFDBFE'}>
+                                    style={{ backgroundColor: 'var(--brand-light)', borderColor: 'var(--brand-light-border)' }}
+                                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--brand-accent)'}
+                                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--brand-light-border)'}>
                                     <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-all"
-                                        style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
+                                        style={{ backgroundColor: '#DBEAFE', color: 'var(--brand-accent)' }}>
                                         <FiBriefcase size={24} />
                                     </div>
                                     <h3 className="text-lg font-bold text-text-primary mb-1.5">Lender</h3>
@@ -545,8 +545,8 @@ const Onboarding = () => {
                             {livenessPhase === 'idle' && (
                                 <div className="flex flex-col items-center gap-6">
                                     <div className="w-20 h-20 rounded-full flex items-center justify-center"
-                                        style={{ backgroundColor: '#EFF6FF' }}>
-                                        <FiCamera size={40} style={{ color: '#2563EB' }} />
+                                        style={{ backgroundColor: 'var(--brand-light)' }}>
+                                        <FiCamera size={40} style={{ color: 'var(--brand-accent)' }} />
                                     </div>
                                     <p className="text-sm text-text-secondary max-w-sm">AWS will prompt you to move your face into an oval. The check takes about 5 seconds.</p>
                                     <button onClick={startLivenessSession} className="btn-primary !px-10 !py-3.5">
@@ -557,7 +557,7 @@ const Onboarding = () => {
 
                             {livenessPhase === 'loading' && (
                                 <div className="flex flex-col items-center gap-4 py-10">
-                                    <FiLoader size={40} className="animate-spin" style={{ color: '#2563EB' }} />
+                                    <FiLoader size={40} className="animate-spin" style={{ color: 'var(--brand-accent)' }} />
                                     <p className="text-sm text-text-secondary animate-pulse">Initialising secure session…</p>
                                 </div>
                             )}
@@ -607,8 +607,8 @@ const Onboarding = () => {
                             <div className="rounded-2xl p-10 mb-5 flex flex-col items-center gap-6"
                                 style={{ backgroundColor: '#F8FAFC', border: '2px dashed #E2E8F0' }}>
                                 <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                                    style={{ backgroundColor: '#EFF6FF' }}>
-                                    <FiPocket size={32} style={{ color: '#2563EB' }} />
+                                    style={{ backgroundColor: 'var(--brand-light)' }}>
+                                    <FiPocket size={32} style={{ color: 'var(--brand-accent)' }} />
                                 </div>
                                 <div className="w-full overflow-hidden flex justify-center">
                                     <ConnectButton />
@@ -636,8 +636,8 @@ const Onboarding = () => {
                             <p className="text-sm text-text-secondary mb-8">Minting your immutable identity token on Ethereum Sepolia.</p>
 
                             <div className="rounded-2xl p-8 mb-6 flex flex-col items-center"
-                                style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-                                <FiShield size={56} style={{ color: '#2563EB' }} className="mb-4" />
+                                style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
+                                <FiShield size={56} style={{ color: 'var(--brand-accent)' }} className="mb-4" />
                                 <h4 className="font-bold text-lg text-text-primary mb-1">PanCred ID</h4>
                                 <p className="text-xs text-text-secondary font-mono mt-1 truncate w-full text-center">{address}</p>
                                 {txnHash && (
@@ -645,7 +645,7 @@ const Onboarding = () => {
                                         style={{ backgroundColor: '#DBEAFE', border: '1px solid #93C5FD' }}>
                                         <p className="text-xs font-semibold mb-1" style={{ color: '#1D4ED8' }}>Transaction Broadcasting</p>
                                         <a href={`https://sepolia.etherscan.io/tx/${txnHash}`} target="_blank" rel="noreferrer"
-                                            className="text-xs font-mono flex items-center gap-1.5 hover:underline" style={{ color: '#2563EB' }}>
+                                            className="text-xs font-mono flex items-center gap-1.5 hover:underline" style={{ color: 'var(--brand-accent)' }}>
                                             View on Explorer <FiExternalLink size={11} />
                                         </a>
                                     </div>

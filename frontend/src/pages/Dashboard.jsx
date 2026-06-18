@@ -33,8 +33,8 @@ const InsurancePoolWidget = () => {
             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: '#EFF6FF' }}>
-                        <FiShield size={16} style={{ color: '#2563EB' }} />
+                        style={{ backgroundColor: 'var(--brand-light)' }}>
+                        <FiShield size={16} style={{ color: 'var(--brand-accent)' }} />
                     </div>
                     <div>
                         <h4 className="text-sm font-semibold text-text-primary">Protocol Insurance Pool</h4>
@@ -45,7 +45,7 @@ const InsurancePoolWidget = () => {
                     {loading ? (
                         <div className="h-5 w-24 animate-pulse rounded-md" style={{ backgroundColor: '#E2E8F0' }}></div>
                     ) : (
-                        <div className="text-lg font-bold" style={{ color: '#2563EB' }}>
+                        <div className="text-lg font-bold" style={{ color: 'var(--brand-accent)' }}>
                             {Number(balance).toFixed(4)} <span className="text-sm font-semibold text-text-secondary">ETH</span>
                         </div>
                     )}
@@ -164,7 +164,7 @@ const Dashboard = () => {
     if (!userProfile) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-                <div className="w-8 h-8 border-2 border-border border-t-transparent rounded-full animate-spin" style={{ borderTopColor: '#2563EB' }} />
+                <div className="w-8 h-8 border-2 border-border border-t-transparent rounded-full animate-spin" style={{ borderTopColor: 'var(--brand-accent)' }} />
                 <span className="text-sm text-text-secondary font-medium">Loading profile...</span>
             </div>
         );

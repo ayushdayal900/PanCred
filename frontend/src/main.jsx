@@ -57,7 +57,7 @@ createRoot(document.getElementById('root')).render(
             <QueryClientProvider client={queryClient}>
                 <AuthProvider>
                     <RainbowKitProvider theme={darkTheme({
-                        accentColor: '#2563eb',
+                        accentColor: 'var(--brand-accent)',
                         accentColorForeground: 'white',
                         borderRadius: 'large',
                         fontStack: 'system',
@@ -75,7 +75,7 @@ createRoot(document.getElementById('root')).render(
                             },
                             success: { style: { borderLeft: '4px solid #16a34a' } },
                             error: { style: { borderLeft: '4px solid #dc2626' } },
-                            loading: { style: { borderLeft: '4px solid #2563eb' } },
+                            loading: { style: { borderLeft: '4px solid var(--brand-accent)' } },
                         }} />
                         <App />
                     </RainbowKitProvider>

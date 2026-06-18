@@ -547,7 +547,7 @@ const LenderDashboard = () => {
                                 onClick={handleClaimFaucet}
                                 disabled={claimingFaucet}
                                 className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
-                                style={{ backgroundColor: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}
+                                style={{ backgroundColor: 'var(--brand-light)', color: 'var(--brand-accent)', border: '1px solid var(--brand-light-border)' }}
                             >
                                 {claimingFaucet ? 'Claiming...' : 'Claim 1000 tUSDT'}
                             </button>
@@ -578,9 +578,9 @@ const LenderDashboard = () => {
                             <span className="text-xs font-semibold" style={{ color: '#16A34A' }}>Verified SBT</span>
                         </a>
                         <a href={`https://sepolia.etherscan.io/address/${walletAddress}`} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all hover:opacity-80" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-                            <FiShield size={12} style={{ color: '#2563EB' }} />
-                            <span className="text-xs font-semibold" style={{ color: '#2563EB' }}>Authorized</span>
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all hover:opacity-80" style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
+                            <FiShield size={12} style={{ color: 'var(--brand-accent)' }} />
+                            <span className="text-xs font-semibold" style={{ color: 'var(--brand-accent)' }}>Authorized</span>
                         </a>
                     </>
                 ) : (
@@ -628,7 +628,7 @@ const LenderDashboard = () => {
                                 <div className="space-y-3 mb-5">
                                     <div className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
                                         <div className="flex items-center gap-2">
-                                            <FiTrendingUp size={14} style={{ color: '#2563EB' }} />
+                                            <FiTrendingUp size={14} style={{ color: 'var(--brand-accent)' }} />
                                             <span className="text-xs font-semibold text-text-secondary">Trust Score</span>
                                         </div>
                                         <div className="flex flex-col items-end gap-1">
@@ -645,9 +645,9 @@ const LenderDashboard = () => {
                                             <p className="text-xs font-semibold text-text-secondary mb-1">Interest</p>
                                             <p className="font-bold text-sm" style={{ color: '#16A34A' }}>+{(loan.amountRequested * (loan.interestRate / 100)).toFixed(3)}</p>
                                         </div>
-                                        <div className="p-3 rounded-xl" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+                                        <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
                                             <p className="text-xs font-semibold text-text-secondary mb-1">Term</p>
-                                            <p className="font-bold text-sm" style={{ color: '#2563EB' }}>{loan.durationMonths}m</p>
+                                            <p className="font-bold text-sm" style={{ color: 'var(--brand-accent)' }}>{loan.durationMonths}m</p>
                                         </div>
                                     </div>
 
@@ -685,7 +685,7 @@ const LenderDashboard = () => {
                         <p className="text-sm text-text-secondary mt-1">Scheduled installments from borrowers across all active agreements.</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        {upcomingLoading && <FiLoader size={16} className="animate-spin" style={{ color: '#2563EB' }} />}
+                        {upcomingLoading && <FiLoader size={16} className="animate-spin" style={{ color: 'var(--brand-accent)' }} />}
                         <span className="badge">{upcomingPayments.length} Active</span>
                     </div>
                 </div>
@@ -776,7 +776,7 @@ const LenderDashboard = () => {
                             <h2 className="text-xl font-semibold text-text-primary">Funded Agreements</h2>
                             <p className="text-sm text-text-secondary mt-1">P2P loan contracts you've funded — track installment returns.</p>
                         </div>
-                        {lenderAgreementsLoading && <FiLoader size={16} className="animate-spin" style={{ color: '#2563EB' }} />}
+                        {lenderAgreementsLoading && <FiLoader size={16} className="animate-spin" style={{ color: 'var(--brand-accent)' }} />}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -785,7 +785,7 @@ const LenderDashboard = () => {
                             const totalExpected = (agr.totalDuration * Number(agr.monthlyPayment)).toFixed(6);
                             const progress = agr.totalDuration > 0 ? (agr.paymentsMade / agr.totalDuration) * 100 : 0;
                             return (
-                                <div key={agr.address} className="premium-card !p-6" style={{ borderLeft: `4px solid ${agr.completed ? '#16A34A' : agr.isOverdue ? '#DC2626' : '#2563EB'}` }}>
+                                <div key={agr.address} className="premium-card !p-6" style={{ borderLeft: `4px solid ${agr.completed ? '#16A34A' : agr.isOverdue ? '#DC2626' : 'var(--brand-accent)'}` }}>
                                     <div className="flex justify-between items-start mb-5">
                                         <div>
                                             <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-0.5">Agreement</p>
@@ -801,7 +801,7 @@ const LenderDashboard = () => {
                                             <p className="text-xs font-semibold text-text-secondary mb-1">Received So Far</p>
                                             <p className="font-bold" style={{ color: '#16A34A' }}>{paidSoFar} <span className="text-text-secondary text-xs font-normal">{agr.mode === 0 ? 'ETH' : 'tUSDT'}</span></p>
                                         </div>
-                                        <div className="rounded-xl p-4" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+                                        <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
                                             <p className="text-xs font-semibold text-text-secondary mb-1">Total Expected</p>
                                             <p className="font-bold text-text-primary">{totalExpected} <span className="text-text-secondary text-xs font-normal">{agr.mode === 0 ? 'ETH' : 'tUSDT'}</span></p>
                                         </div>
@@ -848,7 +848,7 @@ const LenderDashboard = () => {
                                             <p className="text-xs font-semibold text-text-secondary">{progress.toFixed(0)}%</p>
                                         </div>
                                         <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#E2E8F0' }}>
-                                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: '#2563EB' }} />
+                                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: 'var(--brand-accent)' }} />
                                         </div>
                                     </div>
                                 </div>

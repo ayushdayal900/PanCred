@@ -35,7 +35,7 @@ const Sidebar = ({ onClose }) => {
             {/* Brand */}
             <div className="flex items-center justify-between mb-8 px-2 shrink-0">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2563EB' }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--brand-accent)' }}>
                         <FiShield className="text-white" size={15} />
                     </div>
                     <div>

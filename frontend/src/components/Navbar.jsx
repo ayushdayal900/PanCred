@@ -20,7 +20,7 @@ const Navbar = () => {
             <div className="global-container h-16 flex justify-between items-center">
                 {/* Brand */}
                 <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2563EB' }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--brand-accent)' }}>
                         <FiShield className="text-white" size={16} />
                     </div>
                     <Link to="/" className="text-lg font-bold text-text-primary tracking-tight">

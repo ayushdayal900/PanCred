@@ -562,9 +562,9 @@ const BorrowerDashboard = () => {
                         <FiActivity size={14} className={agreementsLoading ? 'animate-spin' : ''} />
                         Sync Dashboard
                     </button>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#2563EB' }}></div>
-                        <span className="text-xs font-semibold" style={{ color: '#2563EB' }}>Live Sync</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
+                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--brand-accent)' }}></div>
+                        <span className="text-xs font-semibold" style={{ color: 'var(--brand-accent)' }}>Live Sync</span>
                     </div>
                 </div>
             </header>
@@ -576,10 +576,10 @@ const BorrowerDashboard = () => {
                         {/* ── Protocol Reputation Card ── */}
                         <div className="premium-card card-blue">
                             <div className="flex items-center gap-2 mb-4">
-                                <FiAward size={16} style={{ color: '#2563EB' }} />
+                                <FiAward size={16} style={{ color: 'var(--brand-accent)' }} />
                                 <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Trust Score</span>
                             </div>
-                            <div className="text-4xl md:text-5xl font-bold text-text-primary mb-2" style={{ color: '#2563EB' }}>{trustData.trustScore}</div>
+                            <div className="text-4xl md:text-5xl font-bold text-text-primary mb-2" style={{ color: 'var(--brand-accent)' }}>{trustData.trustScore}</div>
                             <div className="flex items-center gap-2 mb-4">
                                 <span className="text-xs font-semibold text-text-secondary">{getTrustTier(trustData.trustScore).label}</span>
                             </div>
@@ -592,12 +592,12 @@ const BorrowerDashboard = () => {
                                     <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#DBEAFE' }}>
                                         <div
                                             className="h-full rounded-full transition-all duration-700"
-                                            style={{ width: `${Math.min(100, ((trustData.trustScore - 300) / 400) * 100)}%`, backgroundColor: '#2563EB' }}
+                                            style={{ width: `${Math.min(100, ((trustData.trustScore - 300) / 400) * 100)}%`, backgroundColor: 'var(--brand-accent)' }}
                                         />
                                     </div>
                                 </div>
                             )}
-                            <div className="mt-4 pt-4 flex justify-between items-center" style={{ borderTop: '1px solid #BFDBFE' }}>
+                            <div className="mt-4 pt-4 flex justify-between items-center" style={{ borderTop: '1px solid var(--brand-light-border)' }}>
                                 <span className="text-xs text-text-secondary font-medium">Completed Loans</span>
                                 <span className="text-lg font-bold text-text-primary">{trustData.completedLoans}</span>
                             </div>
@@ -610,7 +610,7 @@ const BorrowerDashboard = () => {
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: hasIdentity ? '#F0FDF4' : '#FEF2F2' }}>
-                                    {identityChecking ? <FiLoader className="animate-spin" style={{ color: '#2563EB' }} /> : hasIdentity ? <FiCheckCircle size={22} style={{ color: '#16A34A' }} /> : <FiInfo size={22} style={{ color: '#DC2626' }} />}
+                                    {identityChecking ? <FiLoader className="animate-spin" style={{ color: 'var(--brand-accent)' }} /> : hasIdentity ? <FiCheckCircle size={22} style={{ color: '#16A34A' }} /> : <FiInfo size={22} style={{ color: '#DC2626' }} />}
                                 </div>
                                 <div>
                                     <p className="text-base font-semibold text-text-primary">
@@ -679,7 +679,7 @@ const BorrowerDashboard = () => {
                     ) : (
                         <div className="space-y-6 md:space-y-8">
                             {myLoans.map(loan => (
-                                <div key={loan._id} className="premium-card !p-6 md:!p-8" style={{ borderLeft: '4px solid #2563EB' }}>
+                                <div key={loan._id} className="premium-card !p-6 md:!p-8" style={{ borderLeft: '4px solid var(--brand-accent)' }}>
                                     <div className="flex flex-col sm:flex-row justify-between gap-5 mb-6">
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-2">
@@ -700,7 +700,7 @@ const BorrowerDashboard = () => {
                                             </div>
                                             <div className="pl-5" style={{ borderLeft: '1px solid #E2E8F0' }}>
                                                 <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mb-1">Total Repay</p>
-                                                <p className="font-bold text-lg" style={{ color: '#2563EB' }}>{(loan.amountRequested * (1 + loan.interestRate / 100)).toFixed(4)}</p>
+                                                <p className="font-bold text-lg" style={{ color: 'var(--brand-accent)' }}>{(loan.amountRequested * (1 + loan.interestRate / 100)).toFixed(4)}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -758,7 +758,7 @@ const BorrowerDashboard = () => {
                         <p className="text-sm text-text-secondary mt-1">All ads you have broadcast on-chain to the lender marketplace.</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        {myAdsLoading && <FiLoader size={16} className="animate-spin" style={{ color: '#2563EB' }} />}
+                        {myAdsLoading && <FiLoader size={16} className="animate-spin" style={{ color: 'var(--brand-accent)' }} />}
                         <span className="badge">{myAds.length} Ad{myAds.length !== 1 ? 's' : ''}</span>
                     </div>
                 </div>
@@ -819,7 +819,7 @@ const BorrowerDashboard = () => {
                         <h2 className="text-xl font-semibold text-text-primary">On-Chain Archive</h2>
                         <p className="text-sm text-text-secondary mt-1">Direct cryptographic verification of your protocol interactions.</p>
                     </div>
-                    {onChainLoading && <FiLoader size={16} className="animate-spin" style={{ color: '#2563EB' }} />}
+                    {onChainLoading && <FiLoader size={16} className="animate-spin" style={{ color: 'var(--brand-accent)' }} />}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -895,7 +895,7 @@ const BorrowerDashboard = () => {
                             <h2 className="text-xl font-semibold text-text-primary">Installment Agreements</h2>
                             <p className="text-sm text-text-secondary mt-1">Active P2P loan contracts — pay monthly installments on-chain.</p>
                         </div>
-                        {agreementsLoading && <FiLoader size={16} className="animate-spin" style={{ color: '#2563EB' }} />}
+                        {agreementsLoading && <FiLoader size={16} className="animate-spin" style={{ color: 'var(--brand-accent)' }} />}
                     </div>
 
                     {agreements.length === 0 && !agreementsLoading ? (
@@ -912,7 +912,7 @@ const BorrowerDashboard = () => {
                                 const progress = agr.totalDuration > 0 ? (agr.paymentsMade / agr.totalDuration) * 100 : 0;
                                 const nextDue = new Date(agr.nextDueTimestamp * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
                                 return (
-                                    <div key={agr.address} className="premium-card !p-6" style={{ borderLeft: `4px solid ${agr.completed ? '#16A34A' : agr.isOverdue ? '#DC2626' : agr.isDue ? '#D97706' : '#2563EB'}` }}>
+                                    <div key={agr.address} className="premium-card !p-6" style={{ borderLeft: `4px solid ${agr.completed ? '#16A34A' : agr.isOverdue ? '#DC2626' : agr.isDue ? '#D97706' : 'var(--brand-accent)'}` }}>
                                         <div className="flex justify-between items-start mb-5">
                                             <div>
                                                 <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-0.5">Agreement</p>
@@ -931,7 +931,7 @@ const BorrowerDashboard = () => {
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mb-1">Total Remaining</p>
-                                                <p className="text-lg font-bold" style={{ color: '#2563EB' }}>{(Number(agr.monthlyPayment) * agr.remainingPayments).toFixed(2)} {agr.mode === 0 ? 'ETH' : 'tUSDT'}</p>
+                                                <p className="text-lg font-bold" style={{ color: 'var(--brand-accent)' }}>{(Number(agr.monthlyPayment) * agr.remainingPayments).toFixed(2)} {agr.mode === 0 ? 'ETH' : 'tUSDT'}</p>
                                             </div>
                                         </div>
 
@@ -981,7 +981,7 @@ const BorrowerDashboard = () => {
                                                 <p className="text-[10px] text-text-secondary font-bold">{progress.toFixed(0)}%</p>
                                             </div>
                                             <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#E2E8F0' }}>
-                                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: '#2563EB' }} />
+                                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: 'var(--brand-accent)' }} />
                                             </div>
                                         </div>
 
@@ -1033,7 +1033,7 @@ const BorrowerDashboard = () => {
                 <button onClick={() => setShowTrustHistory(v => !v)} className="w-full flex items-center justify-between pb-5 group">
                     <div>
                         <h2 className="text-xl font-semibold text-text-primary flex items-center gap-2">
-                            <FiAward style={{ color: '#2563EB' }} size={18} /> Trust Score History
+                            <FiAward style={{ color: 'var(--brand-accent)' }} size={18} /> Trust Score History
                         </h2>
                         <p className="text-sm text-text-secondary mt-1">Full audit trail of your reputation updates.</p>
                     </div>

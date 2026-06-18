@@ -11,7 +11,7 @@ const HowItWorks = () => {
     const navigate = useNavigate();
 
     const stepColors = [
-        { border: '#2563EB', iconBg: '#EFF6FF', iconColor: '#2563EB' },
+        { border: 'var(--brand-accent)', iconBg: 'var(--brand-light)', iconColor: 'var(--brand-accent)' },
         { border: '#16A34A', iconBg: '#F0FDF4', iconColor: '#16A34A' },
         { border: '#D97706', iconBg: '#FFFBEB', iconColor: '#D97706' },
         { border: '#9333EA', iconBg: '#FAF5FF', iconColor: '#9333EA' },
@@ -123,7 +123,7 @@ const HowItWorks = () => {
     ];
 
     const trustEvents = [
-        { event: "NFT Minted", who: "Both", pts: "+300", color: '#2563EB' },
+        { event: "NFT Minted", who: "Both", pts: "+300", color: 'var(--brand-accent)' },
         { event: "First loan funded", who: "Lender", pts: "+50", color: '#0D9488' },
         { event: "Subsequent loans funded", who: "Lender", pts: "+10", color: '#16A34A' },
         { event: "First repayment", who: "Borrower", pts: "+100", color: '#9333EA' },
@@ -191,7 +191,7 @@ const HowItWorks = () => {
             >
                 <div className="flex items-center gap-3 mb-6">
                     <div className="w-9 h-9 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: '#EFF6FF', color: '#2563EB' }}>
+                        style={{ backgroundColor: 'var(--brand-light)', color: 'var(--brand-accent)' }}>
                         <FiActivity size={16} />
                     </div>
                     <div>
@@ -252,7 +252,7 @@ const HowItWorks = () => {
 
             {/* CTA */}
             <div className="rounded-2xl p-10 text-center"
-                style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
+                style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
                 <h2 className="text-2xl md:text-3xl font-bold text-text-primary mb-3" style={{ letterSpacing: '-0.01em' }}>
                     Ready to start your journey?
                 </h2>

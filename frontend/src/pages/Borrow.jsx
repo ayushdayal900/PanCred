@@ -26,19 +26,19 @@ const TrustScoreBanner = ({ trustScore, completedLoans }) => {
     const getTier = (score) => {
         if (score >= 850) return { label: 'Prime', color: '#7C3AED', bg: '#FAF5FF', border: '#DDD6FE' };
         if (score >= 700) return { label: 'Trusted', color: '#0D9488', bg: '#F0FDFA', border: '#99F6E4' };
-        if (score >= 500) return { label: 'Building Credit', color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' };
+        if (score >= 500) return { label: 'Building Credit', color: 'var(--brand-accent)', bg: 'var(--brand-light)', border: 'var(--brand-light-border)' };
         return { label: 'New Borrower', color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' };
     };
 
     const tier = getTier(trustScore);
 
     return (
-        <div className="premium-card !p-6 md:!p-8 mb-8" style={{ borderLeft: '4px solid #2563EB' }}>
+        <div className="premium-card !p-6 md:!p-8 mb-8" style={{ borderLeft: '4px solid var(--brand-accent)' }}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: '#EFF6FF' }}>
-                        <FiAward size={26} style={{ color: '#2563EB' }} />
+                        style={{ backgroundColor: 'var(--brand-light)' }}>
+                        <FiAward size={26} style={{ color: 'var(--brand-accent)' }} />
                     </div>
                     <div>
                         <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">Trust Score</p>
@@ -62,7 +62,7 @@ const TrustScoreBanner = ({ trustScore, completedLoans }) => {
                             className="h-full rounded-full transition-all duration-700"
                             style={{
                                 width: `${progress}%`,
-                                backgroundColor: isEligible ? '#16A34A' : '#2563EB'
+                                backgroundColor: isEligible ? '#16A34A' : 'var(--brand-accent)'
                             }}
                         />
                     </div>
@@ -202,10 +202,10 @@ const LoanRequestForm = ({ walletAddress, walletClient, userProfile, trustScore,
     };
 
     return (
-        <div className="premium-card" style={{ borderLeft: '4px solid #2563EB' }}>
+        <div className="premium-card" style={{ borderLeft: '4px solid var(--brand-accent)' }}>
             <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#EFF6FF' }}>
-                    <FiSend size={18} style={{ color: '#2563EB' }} />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--brand-light)' }}>
+                    <FiSend size={18} style={{ color: 'var(--brand-accent)' }} />
                 </div>
                 <div>
                     <h3 className="text-lg font-semibold text-text-primary">Post Loan Request</h3>
@@ -309,7 +309,7 @@ const LoanRequestForm = ({ walletAddress, walletClient, userProfile, trustScore,
                         </div>
                         <div>
                             <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mb-1">Implied APR</p>
-                            <p className="font-bold text-sm" style={{ color: '#2563EB' }}>{impliedAPR}%</p>
+                            <p className="font-bold text-sm" style={{ color: 'var(--brand-accent)' }}>{impliedAPR}%</p>
                         </div>
                         <div>
                             <p className="text-xs text-text-secondary font-semibold uppercase tracking-wider mb-1">Insurance</p>
@@ -384,28 +384,28 @@ const Borrow = () => {
         <div className="space-y-6 md:space-y-8 p-1">
             <header>
                 <h1 className="text-2xl md:text-3xl font-bold text-text-primary flex items-center gap-3">
-                    <FiTrendingUp style={{ color: '#2563EB' }} /> Borrow Capital
+                    <FiTrendingUp style={{ color: 'var(--brand-accent)' }} /> Borrow Capital
                 </h1>
                 <p className="text-sm text-text-secondary mt-1">Post a loan request — lenders fund directly to your wallet.</p>
             </header>
 
             {checking && (
                 <div className="premium-card flex flex-col items-center justify-center gap-3 py-14">
-                    <FiLoader size={28} className="animate-spin" style={{ color: '#2563EB' }} />
+                    <FiLoader size={28} className="animate-spin" style={{ color: 'var(--brand-accent)' }} />
                     <p className="text-sm text-text-secondary font-medium">Verifying identity on-chain...</p>
                 </div>
             )}
 
             {!checking && !isVerified && (
-                <div className="premium-card" style={{ borderLeft: '4px solid #2563EB' }}>
+                <div className="premium-card" style={{ borderLeft: '4px solid var(--brand-accent)' }}>
                     <p className="text-sm md:text-base text-text-secondary mb-8 font-medium leading-relaxed max-w-2xl">
                         Access capital using your on-chain reputation score. No centralized credit checks, no hidden fees.
                     </p>
                     <div className="rounded-2xl p-8 md:p-10" style={{ border: '2px dashed #E2E8F0' }}>
                         <div className="flex flex-col md:flex-row md:items-center gap-6">
                             <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
-                                style={{ backgroundColor: '#EFF6FF' }}>
-                                <FiShield size={36} style={{ color: '#2563EB' }} />
+                                style={{ backgroundColor: 'var(--brand-light)' }}>
+                                <FiShield size={36} style={{ color: 'var(--brand-accent)' }} />
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-xl font-bold text-text-primary mb-1">Initialize Credit Profile</h3>

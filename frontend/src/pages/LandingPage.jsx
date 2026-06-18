@@ -22,8 +22,8 @@ const LandingPage = () => {
             title: "Soulbound Identity NFT",
             description: "Non-transferable on-chain identity minted after Aadhaar + biometric KYC. Your key to the entire protocol.",
             cardClass: "card-blue",
-            iconBg: "#EFF6FF",
-            iconColor: "#2563EB",
+            iconBg: "var(--brand-light)",
+            iconColor: "var(--brand-accent)",
             tag: "ERC-721 Soulbound"
         },
         {
@@ -67,8 +67,8 @@ const LandingPage = () => {
             title: "Full On-Chain Audit",
             description: "Every transaction — mint, fund, repay — is permanently recorded on Ethereum Sepolia. Verifiable by anyone, anytime.",
             cardClass: "card-blue",
-            iconBg: "#EFF6FF",
-            iconColor: "#2563EB",
+            iconBg: "var(--brand-light)",
+            iconColor: "var(--brand-accent)",
             tag: "Fully Transparent"
         }
     ];
@@ -78,7 +78,7 @@ const LandingPage = () => {
             step: "01",
             title: "Sign Up & Verify Identity",
             desc: "Register, complete Aadhaar + biometric KYC, connect your wallet. Your Soulbound Identity NFT is minted — trust score starts at 300.",
-            borderColor: "#2563EB"
+            borderColor: "var(--brand-accent)"
         },
         {
             step: "02",
@@ -107,16 +107,16 @@ const LandingPage = () => {
     ];
 
     const fullFeatures = [
-        { icon: <FiShield />, label: "Soulbound NFT Identity (ERC-721)", color: "#2563EB" },
+        { icon: <FiShield />, label: "Soulbound NFT Identity (ERC-721)", color: "var(--brand-accent)" },
         { icon: <FiZap />, label: "Biometric + Aadhaar KYC", color: "#9333EA" },
         { icon: <FiTrendingUp />, label: "On-chain Trust Score (0–1000)", color: "#16A34A" },
         { icon: <FiAward />, label: "Bronze / Silver / Gold Tiers", color: "#D97706" },
         { icon: <FiLayers />, label: "P2P Loan Marketplace", color: "#0D9488" },
-        { icon: <FiCreditCard />, label: "Per-Loan Agreement Contracts", color: "#2563EB" },
+        { icon: <FiCreditCard />, label: "Per-Loan Agreement Contracts", color: "var(--brand-accent)" },
         { icon: <FiDollarSign />, label: "Dynamic 1% Insurance Pool", color: "#16A34A" },
         { icon: <FiActivity />, label: "Real-time Installment Tracking", color: "#9333EA" },
         { icon: <FiUsers />, label: "Borrower & Lender Dashboards", color: "#0D9488" },
-        { icon: <FiGlobe />, label: "Live on Ethereum Sepolia", color: "#2563EB" },
+        { icon: <FiGlobe />, label: "Live on Ethereum Sepolia", color: "var(--brand-accent)" },
         { icon: <FiLock />, label: "Signer-gated Transactions", color: "#D97706" },
         { icon: <FiEye />, label: "Full On-Chain Audit Trail", color: "#16A34A" },
     ];
@@ -133,12 +133,12 @@ const LandingPage = () => {
                             transition={{ duration: 0.6 }}
                         >
                             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-8"
-                                style={{ backgroundColor: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }}>
+                                style={{ backgroundColor: 'var(--brand-light)', color: 'var(--brand-accent)', border: '1px solid var(--brand-light-border)' }}>
                                 <FiCheckCircle size={13} /> Live on Ethereum Sepolia
                             </div>
 
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-text-primary mb-6 leading-tight" style={{ letterSpacing: '-0.02em' }}>
-                                Microfinance <span style={{ color: '#2563EB' }}>Reimagined.</span>
+                                Microfinance <span style={{ color: 'var(--brand-accent)' }}>Reimagined.</span>
                             </h1>
 
                             <p className="text-base md:text-lg text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -178,7 +178,7 @@ const LandingPage = () => {
                             { val: "100%", label: "On-Chain Audit" }
                         ].map((s, i) => (
                             <div key={i} className="space-y-1">
-                                <div className="text-2xl md:text-3xl font-bold text-text-primary leading-none" style={{ color: '#2563EB' }}>{s.val}</div>
+                                <div className="text-2xl md:text-3xl font-bold text-text-primary leading-none" style={{ color: 'var(--brand-accent)' }}>{s.val}</div>
                                 <div className="text-xs text-text-secondary font-medium uppercase tracking-wide mt-2">{s.label}</div>
                             </div>
                         ))}
@@ -286,7 +286,7 @@ const LandingPage = () => {
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             className="rounded-2xl p-10 md:p-16 text-center"
-                            style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}
+                            style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}
                         >
                             <h2 className="text-3xl md:text-4xl font-bold text-text-primary mb-4" style={{ letterSpacing: '-0.01em' }}>
                                 Ready to get started?
@@ -308,7 +308,7 @@ const LandingPage = () => {
             <footer className="py-10 px-4 md:px-6 text-center" style={{ borderTop: '1px solid #E2E8F0', backgroundColor: '#FFFFFF' }}>
                 <div className="global-container">
                     <div className="flex items-center justify-center gap-2.5 mb-6">
-                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#2563EB' }}>
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--brand-accent)' }}>
                             <FiShield className="text-white" size={13} />
                         </div>
                         <span className="text-base font-bold text-text-primary">PanCred</span>

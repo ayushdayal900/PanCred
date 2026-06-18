@@ -6,6 +6,7 @@
   --color-brand-accent: var(--brand-accent);
   --color-brand-dark: var(--brand-dark);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-light: var(--brand-light);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-border: var(--border);
@@ -23,38 +24,44 @@
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
-  --shadow-premium: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --shadow-premium-xl: 0 4px 16px -2px rgb(0 0 0 / 0.08), 0 2px 8px -2px rgb(0 0 0 / 0.04);
-  --shadow-card-hover: 0 8px 24px -4px rgb(37 99 235 / 0.08), 0 2px 8px -2px rgb(0 0 0 / 0.04);
+  --shadow-premium: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.02);
+  --shadow-premium-xl: 0 4px 20px -2px rgb(0 0 0 / 0.05), 0 2px 10px -2px rgb(0 0 0 / 0.02);
+  --shadow-card-hover: 0 10px 25px -4px var(--shadow-accent), 0 2px 8px -2px rgb(0 0 0 / 0.02);
 }
 
 :root,
 [data-theme="light"] {
-  --bg-primary: #FFFFFF;
-  --card-bg: #F8FAFC;
-  --brand-accent: #2563EB;
-  --brand-dark: #1E293B;
-  --brand-soft: #3B82F6;
-  --success: #16A34A;
-  --warning: #D97706;
-  --danger: #DC2626;
-  --border: #E2E8F0;
-  --text-primary: #0F172A;
-  --text-secondary: #64748B;
-}
-
-[data-theme="dark"] {
-  --bg-primary: #0F172A;
-  --card-bg: #1E293B;
-  --brand-accent: #3B82F6;
-  --brand-dark: #F1F5F9;
-  --brand-soft: #60A5FA;
+  --bg-primary: #F0FDF4; /* Sage/mint tint background */
+  --card-bg: #FFFFFF; /* Solid white cards */
+  --brand-accent: #00CD98; /* Vibrant mint green */
+  --brand-dark: #0D2B24; /* Dark forest green */
+  --brand-soft: #5492FF; /* Mockup sky blue for icon highlights */
+  --brand-light: #E6FDF5; /* Very soft mint highlight */
+  --brand-light-border: #B2F0DD;
   --success: #10B981;
   --warning: #F59E0B;
   --danger: #EF4444;
-  --border: #334155;
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
+  --border: #DCFCE7; /* Very soft light green border */
+  --text-primary: #0F2922; /* Deep forest charcoal */
+  --text-secondary: #4D6D62; /* Muted sage gray */
+  --shadow-accent: rgb(0 205 152 / 0.12);
+}
+
+[data-theme="dark"] {
+  --bg-primary: #071411; /* Ultra-dark forest base */
+  --card-bg: #0C211C; /* Dark sage card */
+  --brand-accent: #00CD98;
+  --brand-dark: #F0FDF4;
+  --brand-soft: #5492FF;
+  --brand-light: #123D33;
+  --brand-light-border: #1B584A;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --border: #1B443A;
+  --text-primary: #F0FDF4;
+  --text-secondary: #85A39B;
+  --shadow-accent: rgb(0 205 152 / 0.2);
 }
 
 @layer base {
@@ -121,73 +128,73 @@
 
   /* Colored Card Variants */
   .card-blue {
-    background-color: #EFF6FF;
-    border-color: #BFDBFE;
+    background-color: var(--brand-light);
+    border-color: var(--brand-light-border);
   }
 
   .card-green {
-    background-color: #F0FDF4;
-    border-color: #BBF7D0;
+    background-color: #ECFDF5;
+    border-color: #A7F3D0;
   }
 
   .card-purple {
-    background-color: #FAF5FF;
-    border-color: #E9D5FF;
+    background-color: #FDF4FF;
+    border-color: #F5D0FE;
   }
 
   .card-teal {
     background-color: #F0FDFA;
-    border-color: #99F6E4;
+    border-color: #CCFBF1;
   }
 
   .card-amber {
     background-color: #FFFBEB;
-    border-color: #FDE68A;
+    border-color: #FEF3C7;
   }
 
   .card-red {
-    background-color: #FEF2F2;
-    border-color: #FECACA;
+    background-color: #FFF1F2;
+    border-color: #FECDD3;
   }
 
   /* ── Buttons ── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[10px] text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
-    background-color: #2563EB;
+    background-color: var(--brand-accent);
     min-height: 44px;
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: #1D4ED8;
+    background-color: var(--brand-soft);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgb(37 99 235 / 0.25);
+    box-shadow: 0 4px 12px var(--shadow-accent);
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[10px] text-sm font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
-    background-color: #FFFFFF;
-    border: 1.5px solid #2563EB;
-    color: #2563EB;
+    background-color: var(--card-bg);
+    border: 1.5px solid var(--brand-accent);
+    color: var(--brand-accent);
     min-height: 44px;
   }
 
   .btn-ghost:hover:not(:disabled) {
-    background-color: #EFF6FF;
+    background-color: var(--brand-light);
   }
 
   .btn-success {
     @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[10px] text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
-    background-color: #16A34A;
+    background-color: var(--success);
     min-height: 44px;
   }
 
   .btn-success:hover:not(:disabled) {
-    background-color: #15803D;
+    background-color: #047857;
   }
 
   .btn-warning {
     @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[10px] text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
-    background-color: #D97706;
+    background-color: var(--warning);
     min-height: 44px;
   }
 
@@ -197,73 +204,73 @@
 
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[10px] text-sm font-semibold text-white transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
-    background-color: #DC2626;
+    background-color: var(--danger);
     min-height: 44px;
   }
 
   .btn-danger:hover:not(:disabled) {
-    background-color: #B91C1C;
+    background-color: #BE123C;
   }
 
   /* ── Form Inputs ── */
   .form-input {
     @apply w-full border border-border rounded-xl px-4 py-3 text-text-primary text-sm font-medium placeholder:text-text-secondary transition-all duration-200 outline-none;
-    background-color: #FFFFFF;
+    background-color: var(--card-bg);
   }
 
   .form-input:focus {
-    border-color: #2563EB;
-    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+    border-color: var(--brand-accent);
+    box-shadow: 0 0 0 3px var(--shadow-accent);
   }
 
   .form-input:disabled {
     @apply opacity-60 cursor-not-allowed;
-    background-color: #F8FAFC;
+    background-color: var(--bg-primary);
   }
 
   /* ── Navigation ── */
   .sidebar-link {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-slate-100 transition-all duration-150;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-border transition-all duration-150;
   }
 
   .sidebar-link.active {
-    color: #2563EB;
-    background-color: #EFF6FF;
+    color: var(--brand-accent);
+    background-color: var(--brand-light);
     font-weight: 600;
   }
 
   /* ── Badges ── */
   .badge {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
-    background-color: #EFF6FF;
-    color: #1D4ED8;
-    border: 1px solid #BFDBFE;
+    background-color: var(--brand-light);
+    color: var(--brand-accent);
+    border: 1px solid var(--brand-light-border);
   }
 
   .badge-success {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
-    background-color: #F0FDF4;
-    color: #16A34A;
-    border: 1px solid #BBF7D0;
+    background-color: #ECFDF5;
+    color: var(--success);
+    border: 1px solid #A7F3D0;
   }
 
   .badge-warning {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
     background-color: #FFFBEB;
-    color: #D97706;
-    border: 1px solid #FDE68A;
+    color: var(--warning);
+    border: 1px solid #FEF3C7;
   }
 
   .badge-danger {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold;
-    background-color: #FEF2F2;
-    color: #DC2626;
-    border: 1px solid #FECACA;
+    background-color: #FFF1F2;
+    color: var(--danger);
+    border: 1px solid #FECDD3;
   }
 
   .badge-pill {
     @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border border-border text-text-secondary;
-    background-color: #FFFFFF;
+    background-color: var(--card-bg);
   }
 
   .section-label {
@@ -305,10 +312,10 @@
   --amplify-colors-font-secondary: #64748b;
   --amplify-colors-font-tertiary: #94a3b8;
   --amplify-colors-brand-primary-10: rgba(37, 99, 235, 0.1);
-  --amplify-colors-brand-primary-80: #2563eb;
+  --amplify-colors-brand-primary-80: var(--brand-accent);
   --amplify-colors-brand-primary-90: #1d4ed8;
   --amplify-colors-brand-primary-100: #1e40af;
-  --amplify-components-button-primary-background-color: #2563eb;
+  --amplify-components-button-primary-background-color: var(--brand-accent);
   --amplify-components-button-primary-hover-background-color: #1d4ed8;
   --amplify-components-button-primary-color: #ffffff;
 }

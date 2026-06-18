@@ -137,8 +137,8 @@ const SignIn = () => {
                 {/* Header */}
                 <div className="text-center mb-8">
                     <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5"
-                        style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE' }}>
-                        <FiShield size={24} style={{ color: '#2563EB' }} />
+                        style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
+                        <FiShield size={24} style={{ color: 'var(--brand-accent)' }} />
                     </div>
                     <h2 className="text-2xl font-bold text-text-primary mb-1.5">Welcome back</h2>
                     <p className="text-sm text-text-secondary">Sign in to your PanCred account</p>
@@ -253,7 +253,7 @@ const SignIn = () => {
                     <div className="mt-6 pt-5 text-center" style={{ borderTop: '1px solid #E2E8F0' }}>
                         <p className="text-sm text-text-secondary">
                             Don't have an account?{' '}
-                            <button onClick={() => navigate('/signup')} className="font-semibold ml-1 transition-colors" style={{ color: '#2563EB' }}>
+                            <button onClick={() => navigate('/signup')} className="font-semibold ml-1 transition-colors" style={{ color: 'var(--brand-accent)' }}>
                                 Create Account
                             </button>
                         </p>

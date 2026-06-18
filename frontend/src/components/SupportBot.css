@@ -9,7 +9,7 @@
     width: 56px;
     height: 56px;
     border-radius: 20px;
-    background-color: #2563EB;
+    background-color: var(--brand-accent);
     color: white;
     border: none;
     cursor: pointer;
@@ -40,7 +40,7 @@
 }
 
 .support-bot-header {
-    background-color: #2563EB;
+    background-color: var(--brand-accent);
     color: white;
     padding: 18px 20px;
     display: flex;
@@ -149,7 +149,7 @@
 }
 
 .support-bot-message.user {
-    background-color: #2563EB;
+    background-color: var(--brand-accent);
     color: white;
     border-bottom-right-radius: 4px;
     box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1);
@@ -186,13 +186,13 @@
 }
 
 .support-bot-input:focus {
-    border-color: #2563EB;
+    border-color: var(--brand-accent);
     background-color: white;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .support-bot-send {
-    background-color: #2563EB;
+    background-color: var(--brand-accent);
     color: white;
     border: none;
     border-radius: 12px;

@@ -181,7 +181,7 @@ const Lend = () => {
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold text-text-primary flex items-center gap-3">
-                        <FiDollarSign style={{ color: '#2563EB' }} /> P2P Marketplace
+                        <FiDollarSign style={{ color: 'var(--brand-accent)' }} /> P2P Marketplace
                     </h1>
                     <p className="text-sm text-text-secondary mt-1">
                         Fund verified requests and earn protocol-secured yields.
@@ -223,7 +223,7 @@ const Lend = () => {
             {/* Loading */}
             {loading && hasFactory && (
                 <div className="premium-card flex flex-col items-center justify-center gap-4 py-20">
-                    <FiLoader size={32} className="animate-spin" style={{ color: '#2563EB' }} />
+                    <FiLoader size={32} className="animate-spin" style={{ color: 'var(--brand-accent)' }} />
                     <p className="text-sm text-text-secondary font-medium animate-pulse uppercase tracking-widest">Syncing Marketplace...</p>
                 </div>
             )}
