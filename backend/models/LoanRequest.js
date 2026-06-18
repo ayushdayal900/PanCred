@@ -9,7 +9,7 @@ const loanRequestSchema = new mongoose.Schema({
     amountRequested: {
         type: Number,
         required: true,
-        min: 1,
+        min: 0,
     },
     interestRate: {
         type: Number,
@@ -60,9 +60,9 @@ const loanRequestSchema = new mongoose.Schema({
         type: Boolean,
         default: false, // Prevents duplicate +50 first-installment bonus per loan
     },
-    onChainProcessed: {
-        type: Boolean,
-        default: false,
+    requestTxHash: {
+        type: String,
+        default: null,
     },
     isActive: {
         type: Boolean,

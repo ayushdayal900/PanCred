@@ -137,7 +137,9 @@ async function listenToContractEvents() {
 
     let lastPolledBlock;
     try {
-        lastPolledBlock = await provider.getBlockNumber();
+        const currentBlock = await provider.getBlockNumber();
+        lastPolledBlock = currentBlock > 10000 ? currentBlock - 10000 : 0;
+        console.log(`📡 Event polling initialized starting from block: ${lastPolledBlock}`);
     } catch (err) {
         console.warn('⚠️ Could not fetch initial block number (RPC error). Event polling will retry on next tick:', err.message);
         lastPolledBlock = 0;
@@ -262,23 +264,48 @@ async function listenToContractEvents() {
             // Factory Polling
             if (loanFactoryContract) {
                 try {
-                    // 1. Check for LoanRequested (New Installment Loan Ads)
                     const requestedEvents = await loanFactoryContract.queryFilter('LoanRequested', lastPolledBlock + 1, currentBlock);
                     for (const event of requestedEvents) {
-                        const { id: onChainId, borrower, principal, mode } = event.args;
+                        const { id: onChainId, borrower, principal, totalRepayment, durationInMonths, mode } = event.args;
                         console.log(`[FactoryEvent] LoanRequested detected: ID ${onChainId} by ${borrower}`);
-
+ 
                         try {
-                            const borrowerUser = await User.findOne({ walletAddress: borrower.toLowerCase() });
-                            let loanReq = await LoanRequest.findOne({ simulatedSmartContractId: onChainId.toString() });
+                            let borrowerUser = await User.findOne({ walletAddress: borrower.toLowerCase() });
+                            if (!borrowerUser) {
+                                borrowerUser = new User({
+                                    name: `User ${borrower.slice(0, 6)}`,
+                                    email: `${borrower.toLowerCase()}@PanCred.io`,
+                                    walletAddress: borrower.toLowerCase(),
+                                    kycStatus: 'Verified',
+                                    trustScore: 300
+                                });
+                                await borrowerUser.save();
+                                console.log(`[FactoryEvent] Dynamic User created for borrower: ${borrower}`);
+                            }
 
+                            let loanReq = await LoanRequest.findOne({
+                                $or: [
+                                    { simulatedSmartContractId: onChainId.toString() },
+                                    { requestTxHash: event.transactionHash }
+                                ]
+                            });
+ 
                             if (!loanReq) {
+                                const modeNum = Number(mode);
+                                const decimals = modeNum === 0 ? 18 : 6;
+                                const principalVal = Number(ethers.formatUnits(principal, decimals));
+                                const totalRepaymentVal = Number(ethers.formatUnits(totalRepayment, decimals));
+                                const interestPct = principalVal > 0 ? ((totalRepaymentVal - principalVal) / principalVal) * 100 : 0;
+
                                 loanReq = new LoanRequest({
-                                    borrower: borrowerUser?._id,
-                                    amountRequested: Number(ethers.formatUnits(principal, mode === 0 ? 18 : 6)),
+                                    borrower: borrowerUser._id,
+                                    amountRequested: principalVal,
+                                    interestRate: Number(interestPct.toFixed(2)),
+                                    durationMonths: Number(durationInMonths),
                                     status: 'Pending',
                                     simulatedSmartContractId: onChainId.toString(),
-                                    loanMode: Number(mode),
+                                    loanMode: modeNum,
+                                    requestTxHash: event.transactionHash,
                                     purpose: 'On-chain Factory Request'
                                 });
                                 await loanReq.save();
@@ -288,23 +315,34 @@ async function listenToContractEvents() {
                             console.error('Error processing LoanRequested event:', err);
                         }
                     }
-
+ 
                     // 2. Check for LoanFunded (Installment Loan Funded)
                     const fundedEvents = await loanFactoryContract.queryFilter('LoanFunded', lastPolledBlock + 1, currentBlock);
                     for (const event of fundedEvents) {
                         const { id: onChainId, lender, agreementAddress } = event.args;
                         console.log(`[FactoryEvent] LoanFunded detected: ID ${onChainId} by ${lender}`);
-
+ 
                         try {
                             const loanReq = await LoanRequest.findOne({ simulatedSmartContractId: onChainId.toString() });
                             if (loanReq) {
                                 loanReq.status = 'Funded';
                                 loanReq.simulatedSmartContractId = agreementAddress; // Switch to Agreement Address!
                                 loanReq.fundingTxHash = event.transactionHash;
-
-                                const lenderUser = await User.findOne({ walletAddress: lender.toLowerCase() });
-                                if (lenderUser) loanReq.lender = lenderUser._id;
-
+ 
+                                let lenderUser = await User.findOne({ walletAddress: lender.toLowerCase() });
+                                if (!lenderUser) {
+                                    lenderUser = new User({
+                                        name: `User ${lender.slice(0, 6)}`,
+                                        email: `${lender.toLowerCase()}@PanCred.io`,
+                                        walletAddress: lender.toLowerCase(),
+                                        kycStatus: 'Verified',
+                                        trustScore: 300
+                                    });
+                                    await lenderUser.save();
+                                    console.log(`[FactoryEvent] Dynamic User created for lender: ${lender}`);
+                                }
+                                loanReq.lender = lenderUser._id;
+ 
                                 await loanReq.save();
                                 console.log(`[FactoryEvent] Loan ${onChainId} updated to Funded (Agr: ${agreementAddress})`);
                             }

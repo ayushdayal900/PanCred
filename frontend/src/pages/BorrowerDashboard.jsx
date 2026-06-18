@@ -53,6 +53,65 @@ const BorrowerDashboard = () => {
         trustHistory: []
     });
     const [showTrustHistory, setShowTrustHistory] = useState(false);
+    const [tUSDTBalance, setTUSDTBalance] = useState('0.00');
+    const [claimingFaucet, setClaimingFaucet] = useState(false);
+
+    const fetchBalance = async () => {
+        if (!walletAddress || !addresses.mockUSDT) return;
+        try {
+            const provider = walletClient
+                ? new ethers.BrowserProvider(walletClient.transport)
+                : getSharedProvider();
+            const tUSDTAbi = [
+                "function balanceOf(address) view returns (uint256)",
+                "function decimals() view returns (uint8)"
+            ];
+            const contract = new ethers.Contract(addresses.mockUSDT, tUSDTAbi, provider);
+            const bal = await contract.balanceOf(walletAddress);
+            const decimals = await contract.decimals();
+            setTUSDTBalance(Number(ethers.formatUnits(bal, decimals)).toFixed(2));
+        } catch (error) {
+            console.error("[BorrowerDashboard] Failed to fetch tUSDT balance:", error);
+        }
+    };
+
+    const handleClaimFaucet = async () => {
+        if (!walletAddress) {
+            toast.error('Connect your wallet first');
+            return;
+        }
+
+        setClaimingFaucet(true);
+        const tid = toast.loading('Requesting 1000 tUSDT from faucet...');
+        try {
+            const userToken = token || JSON.parse(localStorage.getItem('userInfo') || '{}')?.token;
+            const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            
+            const response = await fetch(`${API}/api/faucet/claim`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${userToken}`
+                },
+                body: JSON.stringify({ walletAddress })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Failed to claim faucet');
+            }
+
+            toast.success('1000 tUSDT minted to your wallet!', { id: tid });
+            fetchBalance();
+        } catch (err) {
+            const msg = err.message || 'Faucet mint failed';
+            toast.error(msg, { id: tid });
+            console.error('[Faucet] claim error:', err);
+        } finally {
+            setClaimingFaucet(false);
+        }
+    };
 
     const getTrustTier = (score) => {
         if (score >= 850) return { label: 'Prime', };
@@ -217,7 +276,10 @@ const BorrowerDashboard = () => {
     };
 
     useEffect(() => {
-        if (walletAddress) fetchAgreements();
+        if (walletAddress) {
+            fetchAgreements();
+            fetchBalance();
+        }
     }, [walletAddress, walletClient]);
 
     // Listen to Agreement Events
@@ -554,17 +616,33 @@ const BorrowerDashboard = () => {
                     <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Borrower Dashboard</h1>
                     <p className="text-sm text-text-secondary mt-1">Manage your active loan obligations and protocol reputation.</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => { fetchAgreements(); fetchMyLoans(); checkUserIdentity(); fetchTrustData(); }}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-border hover:bg-slate-50 transition-colors text-xs font-semibold text-text-secondary"
-                    >
-                        <FiActivity size={14} className={agreementsLoading ? 'animate-spin' : ''} />
-                        Sync Dashboard
-                    </button>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
-                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--brand-accent)' }}></div>
-                        <span className="text-xs font-semibold" style={{ color: 'var(--brand-accent)' }}>Live Sync</span>
+                <div className="flex flex-col md:flex-row items-end gap-3">
+                    <div className="flex flex-col items-end">
+                        <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">tUSDT Balance</span>
+                        <div className="flex items-center gap-2">
+                            <span className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ backgroundColor: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' }}>{tUSDTBalance} tUSDT</span>
+                            <button
+                                onClick={handleClaimFaucet}
+                                disabled={claimingFaucet}
+                                className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                                style={{ backgroundColor: 'var(--brand-light)', color: 'var(--brand-accent)', border: '1px solid var(--brand-light-border)' }}
+                            >
+                                {claimingFaucet ? 'Claiming...' : 'Claim 1000 tUSDT'}
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => { fetchAgreements(); fetchMyLoans(); checkUserIdentity(); fetchTrustData(); fetchBalance(); }}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-border hover:bg-slate-50 transition-colors text-xs font-semibold text-text-secondary"
+                        >
+                            <FiActivity size={14} className={agreementsLoading ? 'animate-spin' : ''} />
+                            Sync Dashboard
+                        </button>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--brand-light)', border: '1px solid var(--brand-light-border)' }}>
+                            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--brand-accent)' }}></div>
+                            <span className="text-xs font-semibold" style={{ color: 'var(--brand-accent)' }}>Live Sync</span>
+                        </div>
                     </div>
                 </div>
             </header>
